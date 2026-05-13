@@ -1416,6 +1416,11 @@ function initFormListeners(){
   document.getElementById('btn-add-submit').addEventListener('click', submitAdd);
   attachAmtFormat('f-amount');
   attachAmtFormat('f-loan-p');
+  // 事件綁定完成後，主動對當前付款方式做一次 CC 判斷
+  const initMethod=document.getElementById('f-method').value;
+  const initIsCC=isCCMethod(initMethod);
+  document.getElementById('f-install-extra').style.display=initIsCC?'block':'none';
+  if(!initIsCC) resetInstall('f');
 }
 
 function autoFillAmtSign(){
