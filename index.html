@@ -395,19 +395,17 @@ input[type=number]{-moz-appearance:textfield}
         </div>
         <div class="form-group">
           <label class="form-label">金額（負數=支出）</label>
-          <div class="amount-wrap">
-            <span class="amount-currency">$</span>
-            <input type="text" inputmode="decimal" class="form-control" id="f-amount" placeholder="例：-200 或 50,000">
-          </div>
-        </div>
-        <!-- 分期欄位（信用卡付款時才顯示） -->
-        <div id="f-install-extra" style="display:none">
-          <div class="form-group">
-            <label class="form-label">是否分期</label>
-            <div style="display:flex;align-items:center;gap:10px">
-              <button type="button" class="install-toggle-btn" id="f-install-toggle" onclick="toggleInstall('f')">不分期</button>
-              <div id="f-install-count-wrap" style="display:none;align-items:center;gap:6px">
-                <input type="number" class="form-control" id="f-install-count" placeholder="期數" min="2" max="360" step="1" style="width:90px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <div class="amount-wrap" style="flex:0 0 150px">
+              <span class="amount-currency">$</span>
+              <input type="text" inputmode="decimal" class="form-control" id="f-amount" placeholder="-200 或 50,000">
+            </div>
+            <!-- 分期（信用卡時顯示，inline） -->
+            <div id="f-install-extra" style="display:none;align-items:center;gap:6px">
+              <button type="button" class="install-toggle-btn" id="f-install-toggle"
+                onmousedown="event.preventDefault()" onclick="toggleInstall('f')">不分期</button>
+              <div id="f-install-count-wrap" style="display:none;align-items:center;gap:4px">
+                <input type="number" class="form-control" id="f-install-count" placeholder="期數" min="2" max="360" step="1" style="width:72px">
                 <span style="font-size:13px;color:#6B7280">期</span>
               </div>
             </div>
@@ -1315,7 +1313,7 @@ function populateAddForm(){
   fillSelect(document.getElementById('f-sub'), [], '（選填）');
   // 初始化時若預設付款方式已是信用卡，主動顯示分期欄位
   const defaultMethod=document.getElementById('f-method').value;
-  document.getElementById('f-install-extra').style.display=isCCMethod(defaultMethod)?'block':'none';
+  document.getElementById('f-install-extra').style.display=isCCMethod(defaultMethod)?'flex':'none';
 }
 
 function populateEditForm(){
@@ -1398,7 +1396,7 @@ function initFormListeners(){
     mainEl.value=curMain;
     updateSubByMain(mainEl.value, document.getElementById('f-sub'));
     const isCC=isCCMethod(methodVal);
-    document.getElementById('f-install-extra').style.display=isCC?'block':'none';
+    document.getElementById('f-install-extra').style.display=isCC?'flex':'none';
     if(!isCC) resetInstall('f');
   });
   document.getElementById('f-type').addEventListener('change',()=>{
@@ -1410,7 +1408,7 @@ function initFormListeners(){
     // 切換類型後付款方式可能改變，重新判斷是否顯示分期欄位
     const newMethod=document.getElementById('f-method').value;
     const isCC=isCCMethod(newMethod);
-    document.getElementById('f-install-extra').style.display=isCC?'block':'none';
+    document.getElementById('f-install-extra').style.display=isCC?'flex':'none';
     if(!isCC) resetInstall('f');
   });
   document.getElementById('btn-add-submit').addEventListener('click', submitAdd);
@@ -1419,7 +1417,7 @@ function initFormListeners(){
   // 事件綁定完成後，主動對當前付款方式做一次 CC 判斷
   const initMethod=document.getElementById('f-method').value;
   const initIsCC=isCCMethod(initMethod);
-  document.getElementById('f-install-extra').style.display=initIsCC?'block':'none';
+  document.getElementById('f-install-extra').style.display=initIsCC?'flex':'none';
   if(!initIsCC) resetInstall('f');
 }
 
@@ -1634,7 +1632,7 @@ function renderRecords(){
 function txItemHTML(r){
   const ic=catIcon(r.main||r.type), bg=catBg(r.main||r.type);
   const amtCls=r.amount<0?'clr-expense':r.amount>0?'clr-income':'clr-transfer';
-  const amtStr=(r.amount>0?'+':'')+fmt(Math.abs(r.amount));
+  const amtStr=fmt(Math.abs(r.amount));
   const vc=vicShare(r.amount,r.split);
   const vicStr=r.split!==null&&r.split!=='repay'?`Vic: ${vc>0?'+':''}${fmt(Math.abs(vc))}`:'';
   const splitBadge=r.split===0?'<span class="badge badge-gf">全女友</span>'
