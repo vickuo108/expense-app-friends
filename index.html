@@ -3258,8 +3258,14 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.0';
+const APP_VERSION='2.1';
 const CHANGELOG=[
+  {version:'2.1',date:'2026-05-14',items:[
+    '分期按鈕點擊時不再收起鍵盤',
+    '記錄列表正數金額移除加號，保留綠色顯示',
+    '新增金額輸入框縮小，分期選項移至金額欄右側同行',
+    '金額輸入框寬度對齊主類別欄位',
+  ]},
   {version:'2.0',date:'2026-05-13',items:[
     'v2 正式版：合併分期功能分支',
     '信用卡分期記帳：新增期數，統計區顯示分期明細與入帳控制',
