@@ -493,7 +493,7 @@ input[type=number]{-moz-appearance:textfield}
         <button class="stats-qnav-btn" onclick="statScrollTo('sec-fixed-table')">🔒 固定支出</button>
         <button class="stats-qnav-btn" onclick="statScrollTo('sec-bank')">🏦 銀行</button>
         <button class="stats-qnav-btn" onclick="statScrollTo('sec-cc')">💳 信用卡</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-gf')">👩‍❤️‍👨 女友</button>
+        <button class="stats-qnav-btn" onclick="statScrollTo('sec-gf')">👭 女友</button>
         <button class="stats-qnav-btn" onclick="statScrollTo('fin-plan-section')">📈 財務規劃</button>
         <button class="stats-qnav-btn" onclick="statScrollTo('loan-section')">🏦 貸款</button>
         <button class="stats-qnav-btn" onclick="statScrollTo('sec-charts')">📊 圖表</button>
@@ -590,7 +590,7 @@ input[type=number]{-moz-appearance:textfield}
         </div>
       </div>
       <div class="gf-summary" id="sec-gf">
-        <div class="gf-title">👩‍❤️‍👨 女友應還款項</div>
+        <div class="gf-title">👭 女友應還款項</div>
         <div id="gf-rows"></div>
       </div>
       <div class="chart-card" id="fin-plan-section">
@@ -1566,7 +1566,7 @@ function applyFilters(data){
   });
 }
 
-function amtStr(v){return (v>=0?'+':'')+fmt(Math.abs(v));}
+function amtStr(v){return fmt(Math.abs(v));}
 function isGfFiltering(){
   return !![...document.getElementById('filter-split-pills').querySelectorAll('.split-pill.active')]
     .some(b=>['half','gf','repay'].includes(b.dataset.val));
@@ -2251,7 +2251,7 @@ function renderStats(){
     return s+open+allTx+incoming;
   },0);
   const cashEl=document.getElementById('s-cash');
-  cashEl.textContent=(cashAvail<0?'-':'')+'$'+fmt(Math.abs(cashAvail));
+  cashEl.textContent=fmt(Math.abs(cashAvail));
   cashEl.className='stat-box-val '+(cashAvail>=0?'clr-income':'clr-expense');
   // 可用現金（現金帳戶合計 + 提款增加 + 現金存入減少）
   const cashAccts=mg2['現金']||[];
@@ -2263,18 +2263,18 @@ function renderStats(){
   const cashAdjust=data.filter(r=>r.main==='提款'||r.main==='現金存入').reduce((s,r)=>s-r.amount,0);
   const totalCash=cashOnly+cashAdjust;
   const cashOnlyEl=document.getElementById('s-cash-only');
-  cashOnlyEl.textContent=(totalCash<0?'-':'')+'$'+fmt(Math.abs(totalCash));
+  cashOnlyEl.textContent=fmt(Math.abs(totalCash));
   cashOnlyEl.className='stat-box-val '+(totalCash>=0?'clr-income':'clr-expense');
   // 月可用餘額
   const mobal=calcMonthlyBalance(data, prefix);
   const mobalEl=document.getElementById('s-month-bal');
-  mobalEl.textContent=(mobal>=0?'+':'')+fmt(mobal);
+  mobalEl.textContent=(mobal>=0?'+':'')+fmt(Math.abs(mobal));
   mobalEl.className='stat-box-val '+(mobal>=0?'clr-income':'clr-expense');
   // 年可用餘額
   const yrDetail=calcAnnualBalanceDetail(data,statYear);
   const yrbal=yrDetail.total;
   const yrbalEl=document.getElementById('s-year-bal');
-  yrbalEl.textContent=(yrbal>=0?'+':'')+fmt(yrbal);
+  yrbalEl.textContent=(yrbal>=0?'+':'')+fmt(Math.abs(yrbal));
   yrbalEl.className='stat-box-val '+(yrbal>=0?'clr-income':'clr-expense');
   renderIncomeSection(data, prefix);
   renderEWalletSection(data, prefix);
@@ -2531,15 +2531,15 @@ function renderIncomeSection(data, prefix){
 
 function renderEWalletSection(data, prefix){
   const mg=loadMG(); const ewallets=mg['電子錢包']||[]; const bal=loadAcctBal();
-  let tFlow=0;
+  let tFlow=0, tBal=0;
   const nc=n=>n>0?`<span class="clr-income">+${fmt(n)}</span>`:n<0?`<span class="clr-expense">${fmt(n)}</span>`:'';
   const rows=ewallets.map(name=>{
     const flow=data.filter(r=>r.date.startsWith(prefix)&&r.method===name).reduce((s,r)=>s+r.amount,0);
     const balance=(bal[name]||0)+data.filter(r=>r.method===name).reduce((s,r)=>s+r.amount,0);
-    tFlow+=flow;
+    tFlow+=flow; tBal+=balance;
     return `<tr><td>${name}</td><td>${flow?nc(flow):''}</td><td style="text-align:right">${balance?fmt(balance):''}</td></tr>`;
   }).join('');
-  document.getElementById('ewallet-table-body').innerHTML=rows+`<tr class="total-row"><td>電子錢包合計</td><td>${tFlow?nc(tFlow):''}</td><td></td></tr>`;
+  document.getElementById('ewallet-table-body').innerHTML=rows+`<tr class="total-row"><td>電子錢包合計</td><td>${tFlow?nc(tFlow):''}</td><td style="text-align:right">${tBal?fmt(tBal):''}</td></tr>`;
 }
 
 function renderFixedSection(data, prefix){
@@ -3263,8 +3263,15 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.3';
+const APP_VERSION='2.4';
 const CHANGELOG=[
+  {version:'2.4',date:'2026-05-17',items:[
+    '記錄列表頂部合計移除正號',
+    '月/年可用餘額移除負號（顏色區分正負）',
+    '電子錢包合計列新增餘額加總',
+    '女友圖示改為兩個女生 👭',
+    '可用金額、可用現金移除錢字號與負號',
+  ]},
   {version:'2.3',date:'2026-05-17',items:[
     '統計本月收入卡片移除正號',
   ]},
