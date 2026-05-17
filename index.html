@@ -172,7 +172,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .report-table .rep-tot td:first-child{background:#fff}
 .report-table .rep-net td{background:#EFF6FF;font-weight:700;color:#1D4ED8;border-top:2px solid #BFDBFE}
 .rep-view-toggle{display:flex;gap:6px;margin-bottom:10px}
-#panel-report.active{display:flex!important;flex-direction:column;height:100%}
+#panel-report.active{display:flex!important;flex-direction:column}
 #rep-view-year,#rep-view-qm{flex:1;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:0}
 .rep-view-btn{flex:1;padding:7px 0;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-size:12px;cursor:pointer;font-weight:600;color:#374151}
 .rep-view-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
@@ -1369,10 +1369,10 @@ function switchTab(name, btn){
   if(name==='add') document.getElementById('f-date').value=localDateStr();
   if(name==='records'){ populateFilterDropdowns(); renderRecords(); }
   if(name==='stats') renderStats();
-  if(name==='report') renderFinReport();
+  if(name==='report'){ renderFinReport(); fixReportPanelHeight(); }
   if(name==='settings') renderAllSettingsEditors();
   updateHeaderSub();
-  requestAnimationFrame(()=>{ content.scrollTop=_tabScroll[name]||0; });
+  requestAnimationFrame(()=>{ if(name!=='report') content.scrollTop=_tabScroll[name]||0; });
 }
 
 // ─── Add Form ──────────────────────────────────────────────────────────────
@@ -1916,6 +1916,17 @@ function initStatNav(){
 }
 
 // ─── Financial Report ────────────────────────────────────────────────────────
+function fixReportPanelHeight(){
+  const panel=document.getElementById('panel-report');
+  const content=document.getElementById('main-content');
+  if(!panel||!content) return;
+  const cs=getComputedStyle(content);
+  const h=content.clientHeight-parseFloat(cs.paddingTop||0)-parseFloat(cs.paddingBottom||0);
+  panel.style.height=Math.max(h,200)+'px';
+}
+window.addEventListener('resize',()=>{
+  if(document.getElementById('panel-report')?.classList.contains('active')) fixReportPanelHeight();
+});
 let reportYear=new Date().getFullYear(), reportMonth=0, repView='year';
 let _repRenderTimer=null;
 function scheduleRenderFinReport(){
