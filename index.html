@@ -1363,6 +1363,7 @@ function switchTab(name, btn){
   document.getElementById('panel-'+name).classList.add('active');
   btn.classList.add('active');
   content.style.overflowY=name==='report'?'hidden':'auto';
+  content.style.paddingBottom=name==='report'?'0':'80px';
   if(name==='add') document.getElementById('f-date').value=localDateStr();
   if(name==='records'){ populateFilterDropdowns(); renderRecords(); }
   if(name==='stats') renderStats();
@@ -3366,8 +3367,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.12';
+const APP_VERSION='2.13';
 const CHANGELOG=[
+  {version:'2.13',date:'2026-05-18',items:[
+    '移除報表頁橫向捲軸下方多餘留白',
+  ]},
   {version:'2.12',date:'2026-05-18',items:[
     '修正手機版報表資料列被群組列背景覆蓋的問題',
     '報表頁改為單一垂直捲動，移除右側雙重捲軸',
