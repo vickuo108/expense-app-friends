@@ -160,13 +160,14 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .loan-table .total-row td{background:#F1F5F9;font-weight:700;border-top:2px solid #D1D5DB;border-bottom:none}
 .rep-month-btn{flex-shrink:0;padding:5px 10px;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-size:11px;cursor:pointer;white-space:nowrap;color:#374151}
 .rep-month-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
-.report-table{width:100%;border-collapse:collapse;font-size:12px;min-width:320px}
-.report-table th,.report-table td{padding:7px 8px;border-bottom:1px solid #F3F4F6;text-align:right;white-space:nowrap}
-.report-table th:first-child,.report-table td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1;min-width:80px;font-size:11px}
-.report-table thead th{background:#F8FAFC;font-weight:600;color:#374151;border-bottom:2px solid #E5E7EB;position:sticky;top:0;z-index:3}
-.report-table thead th:first-child{background:#F8FAFC;z-index:4}
-.report-table .rep-grp td{background:var(--primary-tint);font-weight:700;color:var(--primary-deep);font-size:13px;padding:8px 8px;border-left:3px solid var(--primary);border-top:2px solid var(--primary-border);position:sticky;left:0}
-.report-table .rep-grp td:not(:first-child){position:static}
+.report-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed}
+.report-table th,.report-table td{padding:7px 8px;border-bottom:1px solid #F3F4F6;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-table th:first-child,.report-table td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:1;font-size:11px}
+.rep-thead-table thead th{background:#F8FAFC;font-weight:600;color:#374151;border-bottom:2px solid #E5E7EB}
+.rep-thead-table thead th:first-child{background:#F8FAFC;z-index:2}
+#rep-thead-scroll::-webkit-scrollbar{display:none}
+.report-table .rep-grp td{background:var(--primary-tint);font-weight:700;color:var(--primary-deep);font-size:13px;padding:8px 8px;border-top:2px solid var(--primary-border)}
+.report-table .rep-grp td:first-child{position:sticky;left:0;z-index:2;background:var(--primary-tint);box-shadow:9999px 0 0 9999px var(--primary-tint);border-left:3px solid var(--primary)}
 .report-table tbody tr:not(.rep-grp):not(.rep-tot):not(.rep-net) td{background:#F8FAFC}
 .report-table .rep-tot td{background:#fff;font-weight:700;border-top:1.5px solid #D1D5DB}
 .report-table .rep-tot td:first-child{background:#fff}
@@ -442,7 +443,7 @@ input[type=number]{-moz-appearance:textfield}
           <label class="form-label">女友分攤</label>
           <div class="split-grid">
             <button class="split-opt active" data-v="null" onmousedown="event.preventDefault()">👤 我全部</button>
-            <button class="split-opt" data-v="1" onmousedown="event.preventDefault()">👫 各一半</button>
+            <button class="split-opt" data-v="1" onmousedown="event.preventDefault()">👭 各一半</button>
             <button class="split-opt" data-v="0" onmousedown="event.preventDefault()">👩 全女友</button>
             <button class="split-opt" data-v="custom" onmousedown="event.preventDefault()">🔢 自訂比例</button>
             <button class="split-opt" data-v="repay" onmousedown="event.preventDefault()">💸 女友已分攤</button>
@@ -752,27 +753,44 @@ input[type=number]{-moz-appearance:textfield}
 
     <!-- ── 財務報表 Panel ── -->
     <div class="panel" id="panel-report">
-      <div class="month-nav">
-        <button class="month-nav-btn" id="rep-prev">‹</button>
-        <span class="month-label" id="rep-year-label"></span>
-        <button class="month-nav-btn" id="rep-next">›</button>
-      </div>
-      <div class="rep-view-toggle">
-        <button class="rep-view-btn active" onclick="setRepView('year',this)">年度報表</button>
-        <button class="rep-view-btn" onclick="setRepView('qm',this)">季&amp;月報表</button>
+      <div id="rep-sticky-controls" style="position:sticky;top:0;z-index:10;background:#F0F2F5;padding-bottom:2px">
+        <div class="month-nav">
+          <button class="month-nav-btn" id="rep-prev">‹</button>
+          <span class="month-label" id="rep-year-label"></span>
+          <button class="month-nav-btn" id="rep-next">›</button>
+        </div>
+        <div class="rep-view-toggle">
+          <button class="rep-view-btn active" onclick="setRepView('year',this)">年度報表</button>
+          <button class="rep-view-btn" onclick="setRepView('qm',this)">季&amp;月報表</button>
+        </div>
+        <div id="rep-month-selector" style="display:flex;gap:6px;overflow-x:auto;padding:8px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none"></div>
+        <div id="rep-copy-btn-wrap" style="display:none;margin-bottom:4px">
+          <button onclick="copyLastMonthBudget()" style="padding:7px 14px;border:1.5px solid #CBD5E1;border-radius:8px;background:#fff;font-size:12px;color:#374151;cursor:pointer">📋 帶入上月預估</button>
+        </div>
+        <!-- 年度報表表頭（凍結在此，與 tbody 同步橫向捲動） -->
+        <div id="rep-thead-scroll" style="overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none">
+          <table class="report-table rep-thead-table">
+            <colgroup>
+              <col style="width:90px"><col style="width:68px"><col style="width:72px">
+              <col style="width:72px"><col style="width:62px"><col style="width:64px"><col style="width:64px">
+            </colgroup>
+            <thead><tr>
+              <th>項目</th><th>預估</th><th>實際</th><th>差距</th><th>達成率</th><th>收入佔比</th><th>各項佔比</th>
+            </tr></thead>
+          </table>
+        </div>
       </div>
       <!-- 年度報表 -->
       <div id="rep-view-year">
-        <div id="rep-month-selector" style="display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none"></div>
-        <div id="rep-copy-btn-wrap" style="display:none;margin-bottom:8px">
-          <button onclick="copyLastMonthBudget()" style="padding:7px 14px;border:1.5px solid #CBD5E1;border-radius:8px;background:#fff;font-size:12px;color:#374151;cursor:pointer">📋 帶入上月預估</button>
+        <div id="rep-tbody-scroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+          <table class="report-table rep-tbody-table">
+            <colgroup>
+              <col style="width:90px"><col style="width:68px"><col style="width:72px">
+              <col style="width:72px"><col style="width:62px"><col style="width:64px"><col style="width:64px">
+            </colgroup>
+            <tbody id="report-tbody"></tbody>
+          </table>
         </div>
-        <table class="report-table">
-          <thead><tr>
-            <th>項目</th><th>預估</th><th>實際</th><th>差距</th><th>達成率</th>
-          </tr></thead>
-          <tbody id="report-tbody"></tbody>
-        </table>
       </div>
       <!-- 季&月報表 -->
       <div id="rep-view-qm" style="display:none">
@@ -912,7 +930,7 @@ input[type=number]{-moz-appearance:textfield}
       <label class="form-label">女友分攤</label>
       <div class="split-grid">
         <button class="split-opt" data-v="null" onclick="editSelectSplit(this)">👤 我全部</button>
-        <button class="split-opt" data-v="1" onclick="editSelectSplit(this)">👫 各一半</button>
+        <button class="split-opt" data-v="1" onclick="editSelectSplit(this)">👭 各一半</button>
         <button class="split-opt" data-v="0" onclick="editSelectSplit(this)">👩 全女友</button>
         <button class="split-opt" data-v="custom" onclick="editSelectSplit(this)">🔢 自訂比例</button>
         <button class="split-opt" data-v="repay" onclick="editSelectSplit(this)">💸 女友已分攤</button>
@@ -1926,6 +1944,7 @@ function initReportNav(){
   const sel=document.getElementById('rep-month-selector');
   const labels=['年度','1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   sel.innerHTML=labels.map((l,i)=>`<button class="rep-month-btn${i===0?' active':''}" data-m="${i}" onclick="selectReportMonth(this)">${l}</button>`).join('');
+  initRepScrollSync();
 }
 
 function selectReportMonth(btn){
@@ -1941,6 +1960,8 @@ function setRepView(v, btn){
   if(btn) btn.classList.add('active');
   document.getElementById('rep-view-year').style.display=v==='year'?'':'none';
   document.getElementById('rep-view-qm').style.display=v==='qm'?'':'none';
+  document.getElementById('rep-month-selector').style.display=v==='year'?'flex':'none';
+  document.getElementById('rep-thead-scroll').style.display=v==='year'?'':'none';
   renderFinReport();
 }
 
@@ -1985,6 +2006,7 @@ function renderFinReport(){
   const fmtB=n=>n?fmt(Math.abs(n)):'';
   const nc=n=>n===0?'':n>0?`<span class="clr-income">${fmt(n)}</span>`:`<span class="clr-expense">${fmt(n)}</span>`;
   const rate=(a,b)=>b?Math.round(Math.abs(a)/Math.abs(b)*100)+'%':'−';
+  const pctCell=(a,base)=>`<td style="text-align:right;color:#9BA3AF;font-size:12px">${(a&&base)?Math.round(Math.abs(a)/Math.abs(base)*100)+'%':'−'}</td>`;
 
   // 有 cat 且為單月時，預估欄顯示可編輯輸入框
   const budgetCell=(b,cat)=>{
@@ -1994,70 +2016,91 @@ function renderFinReport(){
         onkeydown="if(event.key==='Enter')this.blur()"></td>`;
     return `<td>${fmtB(b)}</td>`;
   };
-  const row=(label,b,a,cat,cls='')=>{
+
+  // ── 預先計算各段實際總額（供佔比使用）──
+  const costMains=[...new Set(data.filter(r=>r.type==='成本'&&r.main).map(r=>r.main))];
+  const incA_total=incCats.reduce((s,cat)=>s+rec.filter(r=>r.type==='收入'&&r.main===cat).reduce((ss,r)=>ss+r.amount,0),0);
+  const costA_total=costMains.reduce((s,cat)=>s+rec.filter(r=>r.type==='成本'&&r.main===cat).reduce((ss,r)=>ss+r.amount,0),0);
+  const expA_total=Object.keys(cats).reduce((s,cat)=>s+rec.filter(r=>r.main===cat).reduce((ss,r)=>ss+r.amount,0),0)
+    +fixed.reduce((s,item)=>s+rec.filter(r=>r.main==='固定支出'&&r.sub===item.name).reduce((ss,r)=>ss+r.amount,0),0)
+    +(loans.length?rec.filter(r=>r.main==='貸款').reduce((s,r)=>s+r.amount,0):0);
+
+  // row: catTotal 用於各項佔比（null = 不顯示），showPct = 是否顯示兩個佔比欄
+  const row=(label,b,a,cat,cls='',catTotal=undefined)=>{
     const diff=b||a?a-b:null;
-    return `<tr class="${cls}"><td>${label}</td>${budgetCell(b,cat)}<td>${nc(a)}</td><td>${diff!==null?nc(diff):''}</td><td>${b&&a?rate(a,b):'−'}</td></tr>`;
+    const showPct=catTotal!==undefined;
+    const incPct=showPct?pctCell(a,incA_total):'<td></td>';
+    const catPct=showPct?pctCell(a,catTotal):'<td></td>';
+    return `<tr class="${cls}"><td>${label}</td>${budgetCell(b,cat)}<td>${nc(a)}</td><td>${diff!==null?nc(diff):''}</td><td>${b&&a?rate(a,b):'−'}</td>${incPct}${catPct}</tr>`;
   };
 
   let html='';
 
   // ── 收入 ──
   let incB=0, incA=0;
-  html+=`<tr class="rep-grp"><td colspan="5">收入</td></tr>`;
+  html+=`<tr class="rep-grp"><td>收入</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   incCats.forEach(cat=>{
     const b=getB(cat);
     const a=rec.filter(r=>r.type==='收入'&&r.main===cat).reduce((s,r)=>s+r.amount,0);
     incB+=b; incA+=a;
-    html+=row(cat,b,a,cat);
+    html+=row(cat,b,a,cat,'',incA_total);
   });
-  html+=row('收入合計',incB,incA,null,'rep-tot');
+  html+=row('收入合計',incB,incA,null,'rep-tot',incA_total);
 
   // ── 成本 ──
-  const costMains=[...new Set(data.filter(r=>r.type==='成本'&&r.main).map(r=>r.main))];
   let costB=0, costA=0;
-  html+=`<tr class="rep-grp"><td colspan="5">成本</td></tr>`;
+  html+=`<tr class="rep-grp"><td>成本</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   costMains.forEach(cat=>{
     const b=getB(cat);
     const a=rec.filter(r=>r.type==='成本'&&r.main===cat).reduce((s,r)=>s+r.amount,0);
     costB+=b; costA+=a;
-    html+=row(cat,b,a,cat);
+    html+=row(cat,b,a,cat,'',costA_total);
   });
-  if(!costMains.length) html+=`<tr><td colspan="5" style="color:#9BA3AF;font-size:11px;padding:6px 8px;background:#F8FAFC">（無記錄）</td></tr>`;
-  html+=row('成本合計',costB,costA,null,'rep-tot');
+  if(!costMains.length) html+=`<tr><td colspan="7" style="color:#9BA3AF;font-size:11px;padding:6px 8px;background:#F8FAFC">（無記錄）</td></tr>`;
+  html+=row('成本合計',costB,costA,null,'rep-tot',costA_total);
 
   // ── 費用 ──
   let expB=0, expA=0;
-  html+=`<tr class="rep-grp"><td colspan="5">費用</td></tr>`;
+  html+=`<tr class="rep-grp"><td>費用</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
   Object.keys(cats).forEach(cat=>{
     const b=getB(cat);
     const a=rec.filter(r=>r.main===cat).reduce((s,r)=>s+r.amount,0);
     expB+=b; expA+=a;
-    html+=row(cat,b,a,cat);
+    html+=row(cat,b,a,cat,'',expA_total);
   });
   fixed.forEach(item=>{
     const key='fixed:'+item.name;
     const b=getB(key);
     const a=rec.filter(r=>r.main==='固定支出'&&r.sub===item.name).reduce((s,r)=>s+r.amount,0);
     expB+=b; expA+=a;
-    html+=row(item.name,b,a,key);
+    html+=row(item.name,b,a,key,'',expA_total);
   });
   if(loans.length){
     const loanA=rec.filter(r=>r.main==='貸款').reduce((s,r)=>s+r.amount,0);
     const loanB=getB('loan');
     expB+=loanB; expA+=loanA;
-    html+=row('貸款',loanB,loanA,'loan');
+    html+=row('貸款',loanB,loanA,'loan','',expA_total);
   }
-  html+=row('費用合計',expB,expA,null,'rep-tot');
+  html+=row('費用合計',expB,expA,null,'rep-tot',expA_total);
 
   // ── 淨利 ──
   const netB=incB+expB;
   const netA=incA+expA;
-  html+=row('淨利 = 收入 + 費用',netB,netA,null,'rep-net');
+  html+=row('淨利',netB,netA,null,'rep-net');
   const netRateB=incB?Math.round(netB/incB*100)+'%':'−';
   const netRateA=incA?Math.round(netA/incA*100)+'%':'−';
-  html+=`<tr class="rep-net"><td>淨利率</td><td>${netRateB}</td><td>${netRateA}</td><td></td><td></td></tr>`;
+  html+=`<tr class="rep-net"><td>淨利率</td><td>${netRateB}</td><td>${netRateA}</td><td></td><td></td><td></td><td></td></tr>`;
 
   document.getElementById('report-tbody').innerHTML=html;
+}
+
+function initRepScrollSync(){
+  const hScroll=document.getElementById('rep-thead-scroll');
+  const bScroll=document.getElementById('rep-tbody-scroll');
+  if(!hScroll||!bScroll) return;
+  let syncing=false;
+  hScroll.addEventListener('scroll',()=>{if(!syncing){syncing=true;bScroll.scrollLeft=hScroll.scrollLeft;syncing=false;}});
+  bScroll.addEventListener('scroll',()=>{if(!syncing){syncing=true;hScroll.scrollLeft=bScroll.scrollLeft;syncing=false;}});
 }
 
 function renderQMReport(){
@@ -2230,7 +2273,7 @@ function showMonthBalDetail(){
   const data=loadRecords();
   const prefix=`${statYear}-${String(statMonth).padStart(2,'0')}`;
   const d=calcMonthlyBalanceDetail(data, prefix);
-  const nc=n=>n===0?'$0':n>0?`<span class="clr-income">+${fmt(n)}</span>`:`<span class="clr-expense">${fmt(n)}</span>`;
+  const nc=n=>n===0?'$0':n>0?`<span class="clr-income">${fmt(n)}</span>`:`<span class="clr-expense">${fmt(n)}</span>`;
   const fixedSub=d.fixedActual&&d.fixedEstimate
     ?`實際 ${fmt(d.fixedActual)} ／ 預估 ${fmt(d.fixedEstimate)}`
     :(d.fixedActual?'全部實際記錄':'全部報表預估');
@@ -2267,7 +2310,7 @@ function showMonthBalDetail(){
 function showYearBalDetail(){
   const data=loadRecords();
   const d=calcAnnualBalanceDetail(data,statYear);
-  const nc=n=>n===0?'$0':n>0?`<span class="clr-income">+${fmt(n)}</span>`:`<span class="clr-expense">${fmt(n)}</span>`;
+  const nc=n=>n===0?'$0':n>0?`<span class="clr-income">${fmt(n)}</span>`:`<span class="clr-expense">${fmt(n)}</span>`;
   document.getElementById('mobal-sheet-title').textContent=`${statYear} 年 可用餘額明細`;
   document.getElementById('mobal-sheet-body').innerHTML=`
     <div class="mobal-row">
@@ -2338,13 +2381,13 @@ function renderStats(){
   // 月可用餘額
   const mobal=calcMonthlyBalance(data, prefix);
   const mobalEl=document.getElementById('s-month-bal');
-  mobalEl.textContent=(mobal>=0?'+':'')+fmt(Math.abs(mobal));
+  mobalEl.textContent=fmt(Math.abs(mobal));
   mobalEl.className='stat-box-val '+(mobal>=0?'clr-income':'clr-expense');
   // 年可用餘額
   const yrDetail=calcAnnualBalanceDetail(data,statYear);
   const yrbal=yrDetail.total;
   const yrbalEl=document.getElementById('s-year-bal');
-  yrbalEl.textContent=(yrbal>=0?'+':'')+fmt(Math.abs(yrbal));
+  yrbalEl.textContent=fmt(Math.abs(yrbal));
   yrbalEl.className='stat-box-val '+(yrbal>=0?'clr-income':'clr-expense');
   renderIncomeSection(data, prefix);
   renderEWalletSection(data, prefix);
@@ -2478,7 +2521,7 @@ function renderBankSection(data, prefix){
   const bankAccts=mg['銀行帳戶']||[];
   const bal=loadAcctBal(); const avail=loadAcctAvail();
   let tPull=0,tPush=0,tOther=0,tBal=0,tAvail=0;
-  const nc=n=>n===0?'-':`<span class="${n<0?'clr-expense':n>0?'clr-income':''}">${n>0?'+':''}${fmt(n)}</span>`;
+  const nc=n=>n===0?'-':`<span class="${n<0?'clr-expense':n>0?'clr-income':''}">${fmt(n)}</span>`;
   const rows=bankAccts.map(name=>{
     const moRecs=data.filter(r=>r.method===name&&r.date.startsWith(prefix));
     // 本月提款（現金離開帳戶，主類別=提款）
@@ -2570,7 +2613,7 @@ function saveLoanPrinEntry(loanId, prefix, val){
   saveLoanPrin(prin); renderStats();
 }
 
-function fmtN(n){ return n?(n>0?'+':'')+fmt(n):'-'; }
+function fmtN(n){ return n?fmt(n):'-'; }
 
 function renderFinPlanSection(data, prefix){
   const plans=loadFinPlan();
@@ -3338,8 +3381,16 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.6';
+const APP_VERSION='2.7';
 const CHANGELOG=[
+  {version:'2.7',date:'2026-05-18',items:[
+    '報表上方導覽列（年份、切換、月份）凍結，往下滑不移動',
+    '報表表頭（項目/預估/實際...）凍結，左右滑與內容同步',
+    '報表收入/成本/費用大項左右滑時固定在左側不消失',
+    '報表收入合計、成本合計、費用合計新增收入佔比及各項佔比',
+    '報表淨利列文字簡化',
+    '各一半分攤圖示改為兩個女生 👭',
+  ]},
   {version:'2.6',date:'2026-05-18',items:[
     '篩選全部類別新增「繳信用卡款」',
     '記錄跨年度時顯示年份大標題',
@@ -3547,6 +3598,9 @@ const DEFAULT_GLOSSARY=[
   {id:'gl06',term:'毛利率',def:'公式：（營業收入 − 營業成本）÷ 營業收入 × 100%\n\n反映企業在扣除直接生產成本後的獲利能力。毛利率越高，代表產品或服務的附加價值越高。'},
   {id:'gl07',term:'淨利率',def:'公式：（毛利 − 營業費用 − 稅額）÷ 營收\n\n反映企業最終的獲利能力，即每一元營收最終留下多少淨利潤。'},
   {id:'gl08',term:'月可用餘額',def:'公式：收入 − 浮動支出 − 固定支出 − 貸款支出\n\n各項說明：\n• 收入：當月所有收入記錄合計\n• 浮動支出：當月浮動類支出，信用卡分期消費只計入本月應攤金額（總額 ÷ 期數）\n• 固定支出：有實際記錄則用記錄金額，尚未記錄則以報表當月預估值代入\n• 貸款支出：有實際還款記錄則用記錄金額，尚未記錄則以報表當月貸款預估值代入'},
+  {id:'gl09',term:'年可用餘額',def:'公式：各月可用餘額加總（1 月至 12 月）\n\n計算邏輯與月可用餘額相同，差別在於將全年 12 個月的收入、浮動支出、固定支出、貸款支出分別累加後計算。\n\n各項說明：\n• 收入：全年所有收入記錄合計\n• 浮動支出：全年浮動類支出，信用卡分期依各月應攤金額計入\n• 固定支出：各月有實際記錄用記錄金額，尚未記錄則以報表各月預估值代入\n• 貸款支出：各月有實際還款記錄用記錄金額，尚未記錄則以報表各月貸款預估值代入'},
+  {id:'gl10',term:'收入佔比',def:'公式：各細項實際金額 ÷ 收入合計 × 100%\n\n顯示於年度/月份報表中，衡量每一筆收入或支出佔總收入的比重。\n\n用途：快速判斷某項支出相對於收入的負擔程度，例如房租佔收入 30% 代表每賺 100 元就有 30 元用於房租。'},
+  {id:'gl11',term:'各項佔比',def:'公式：細項金額 ÷ 所屬大項合計 × 100%\n\n顯示於年度/月份報表中，衡量每一細項在自身類別內的佔比。\n\n• 收入細項 ÷ 收入合計\n• 成本細項 ÷ 成本合計\n• 費用細項 ÷ 費用合計\n\n用途：了解某類支出內部的結構組成，例如在所有費用中哪個項目佔最大比重。'},
 ];
 const KEY_GLOSSARY='vic2_glossary';
 function loadGlossary(){ return load(KEY_GLOSSARY,DEFAULT_GLOSSARY); }
