@@ -166,7 +166,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .report-table thead th{background:#F8FAFC;font-weight:600;color:#374151;border-bottom:2px solid #E5E7EB;position:sticky;top:0;z-index:3}
 .report-table thead th:first-child{background:#F8FAFC;z-index:4}
 .report-table .rep-grp td{background:var(--primary-tint);font-weight:700;color:var(--primary-deep);font-size:13px;padding:8px 8px;border-top:2px solid var(--primary-border)}
-.report-table .rep-grp td:first-child{position:sticky;left:0;z-index:2;background:var(--primary-tint);box-shadow:9999px 0 0 9999px var(--primary-tint);border-left:3px solid var(--primary)}
+.report-table .rep-grp td:first-child{position:sticky;left:0;z-index:2;background:var(--primary-tint);border-left:3px solid var(--primary)}
 .report-table tbody tr:not(.rep-grp):not(.rep-tot):not(.rep-net) td{background:#F8FAFC}
 .report-table .rep-tot td{background:#fff;font-weight:700;border-top:1.5px solid #D1D5DB}
 .report-table .rep-tot td:first-child{background:#fff}
@@ -1362,6 +1362,7 @@ function switchTab(name, btn){
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('panel-'+name).classList.add('active');
   btn.classList.add('active');
+  content.style.overflowY=name==='report'?'hidden':'auto';
   if(name==='add') document.getElementById('f-date').value=localDateStr();
   if(name==='records'){ populateFilterDropdowns(); renderRecords(); }
   if(name==='stats') renderStats();
@@ -3365,8 +3366,12 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.11';
+const APP_VERSION='2.12';
 const CHANGELOG=[
+  {version:'2.12',date:'2026-05-18',items:[
+    '修正手機版報表資料列被群組列背景覆蓋的問題',
+    '報表頁改為單一垂直捲動，移除右側雙重捲軸',
+  ]},
   {version:'2.11',date:'2026-05-18',items:[
     '修正報表資料消失的問題（移除內層 overflow div，改由容器直接處理捲動）',
     '表頭列（項目／預估／實際等）垂直凍結正式生效',
