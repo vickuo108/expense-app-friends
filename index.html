@@ -83,6 +83,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .cst-vic{color:#3B82F6}
 .cst-gf{color:#EC4899}
 .date-group-label{font-size:11px;color:#9BA3AF;font-weight:600;padding:10px 4px 4px;letter-spacing:.5px}
+.date-year-label{font-size:13px;color:#6B7280;font-weight:700;padding:16px 4px 2px;letter-spacing:.5px}
 .tx-swipe-wrap{position:relative;overflow:hidden}
 .tx-swipe-wrap:last-child .tx-item{border-bottom:none}
 .tx-del-btn{position:absolute;right:0;top:0;bottom:0;width:72px;background:#EF4444;color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;-webkit-user-select:none;z-index:1}
@@ -544,7 +545,7 @@ input[type=number]{-moz-appearance:textfield}
         <div class="chart-title">💰 本月收入</div>
         <div style="overflow-x:auto">
           <table class="loan-table">
-            <thead><tr><th>項目</th><th style="text-align:right">金額</th></tr></thead>
+            <thead><tr><th>項目</th><th style="text-align:right">金額</th><th style="text-align:right">進帳日</th></tr></thead>
             <tbody id="income-table-body"></tbody>
           </table>
         </div>
@@ -1345,7 +1346,7 @@ function populateFilterDropdowns(){
   fillSelect(document.getElementById('filter-method'), methods, '全部方式');
   // build flat main list for filter
   const plans=loadFinPlan();
-  const allMain=[...Object.keys(cats),'固定支出','貸款',...plans.map(p=>p.name),...income];
+  const allMain=[...Object.keys(cats),'固定支出','繳信用卡款','貸款',...plans.map(p=>p.name),...income];
   fillSelect(document.getElementById('filter-main'), allMain, '全部類別');
 }
 
@@ -1381,12 +1382,16 @@ function initFormListeners(){
     document.getElementById('f-loan-extra').style.display=main==='貸款'?'block':'none';
     if(main!=='貸款'){ lpEl.value=''; document.getElementById('f-loan-i').value=''; }
   });
-
   subEl.addEventListener('change',()=>{
-    if(mainEl.value==='固定支出'){
-      const fixed=loadFixed();
-      const item=fixed.find(f=>f.name===subEl.value);
-      if(item&&item.amount) amtEl.value=fmtInput(-Math.abs(item.amount));
+    if(mainEl.value==='固定支出'&&subEl.value){
+      const ym=document.getElementById('f-date').value.slice(0,7);
+      const budget=loadMonthBudget(ym)['fixed:'+subEl.value];
+      if(budget){
+        amtEl.value=fmtInput(budget);
+      } else {
+        const item=loadFixed().find(f=>f.name===subEl.value);
+        if(item&&item.amount) amtEl.value=fmtInput(-Math.abs(item.amount));
+      }
     }
   });
 
@@ -1664,9 +1669,15 @@ function renderRecords(){
   }
   const groups={};
   filtered.forEach(r=>{ (groups[r.date]=groups[r.date]||[]).push(r); });
-  list.innerHTML=Object.keys(groups).sort((a,b)=>b.localeCompare(a)).map(date=>`
-    <div class="date-group-label">${formatDateLabel(date)}</div>
-    <div class="card" style="padding:4px 14px">${groups[date].map(txItemHTML).join('')}</div>`).join('');
+  const sortedDates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  const multiYear=new Set(sortedDates.map(d=>d.slice(0,4))).size>1;
+  let lastYear='';
+  list.innerHTML=sortedDates.map(date=>{
+    const yr=date.slice(0,4);
+    const yearHeader=(multiYear&&yr!==lastYear)?(lastYear=yr,`<div class="date-year-label">${yr} 年</div>`):'';
+    return `${yearHeader}<div class="date-group-label">${formatDateLabel(date)}</div>
+    <div class="card" style="padding:4px 14px">${groups[date].map(txItemHTML).join('')}</div>`;
+  }).join('');
   updateClearBtn();
 }
 
@@ -2479,10 +2490,12 @@ function renderBankSection(data, prefix){
     // 加值扣款：此帳戶作為電子錢包加值來源（main=加值, sub=此帳戶）
     const moTopup=data.filter(r=>r.date.startsWith(prefix)&&r.main==='加值'&&r.sub===name).reduce((s,r)=>s+r.amount,0);
     const allTopup=data.filter(r=>r.main==='加值'&&r.sub===name).reduce((s,r)=>s+r.amount,0);
-    const otherNet=other-moTopup;
+    // 被轉入（本月）：顯示於其他進出
+    const moIncoming=data.filter(r=>r.date.startsWith(prefix)&&r.main==='轉帳'&&r.sub===name).reduce((s,r)=>s-r.amount,0);
+    const otherNet=other-moTopup+moIncoming;
     const openBal=bal[name]||0;
     const allTx=data.filter(r=>r.method===name).reduce((s,r)=>s+r.amount,0);
-    // 被轉入：其他帳戶以轉帳方式轉進此帳戶（main=轉帳, sub=此帳戶）
+    // 被轉入（全部）：用於餘額計算
     const incoming=data.filter(r=>r.main==='轉帳'&&r.sub===name).reduce((s,r)=>s-r.amount,0);
     const balance=openBal+allTx+incoming-allTopup;
     const isAvail=avail[name]||false;
@@ -2582,11 +2595,13 @@ function renderIncomeSection(data, prefix){
   const incCats=loadIncome();
   let total=0;
   const rows=incCats.map(cat=>{
-    const amt=data.filter(r=>r.date.startsWith(prefix)&&r.type==='收入'&&r.main===cat).reduce((s,r)=>s+r.amount,0);
+    const recs=data.filter(r=>r.date.startsWith(prefix)&&r.type==='收入'&&r.main===cat);
+    const amt=recs.reduce((s,r)=>s+r.amount,0);
     if(amt) total+=amt;
-    return `<tr><td>${cat}</td><td style="text-align:right">${amt?fmt(amt):''}</td></tr>`;
+    const lastDate=recs.length?recs.sort((a,b)=>b.date.localeCompare(a.date))[0].date.slice(5).replace('-','/'):''
+    return `<tr><td>${cat}</td><td style="text-align:right">${amt?fmt(amt):''}</td><td style="text-align:right;color:#9BA3AF;font-size:12px">${lastDate}</td></tr>`;
   }).join('');
-  document.getElementById('income-table-body').innerHTML=rows+`<tr class="total-row"><td>本月收入合計</td><td style="text-align:right">${fmt(total)}</td></tr>`;
+  document.getElementById('income-table-body').innerHTML=rows+`<tr class="total-row"><td>本月收入合計</td><td style="text-align:right">${fmt(total)}</td><td></td></tr>`;
 }
 
 function renderEWalletSection(data, prefix){
@@ -3323,8 +3338,15 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.5';
+const APP_VERSION='2.6';
 const CHANGELOG=[
+  {version:'2.6',date:'2026-05-18',items:[
+    '篩選全部類別新增「繳信用卡款」',
+    '記錄跨年度時顯示年份大標題',
+    '固定支出新增時自動帶入報表月預算（無預算則帶入設定金額）',
+    '銀行統計其他進出欄位新增轉帳轉入金額',
+    '統計本月收入表格新增進帳日欄位',
+  ]},
   {version:'2.5',date:'2026-05-17',items:[
     '女友分攤新增自訂比例，可指定女友負擔百分比',
     '自訂比例再次點擊可收回輸入框',
