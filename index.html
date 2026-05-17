@@ -172,6 +172,8 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .report-table .rep-tot td:first-child{background:#fff}
 .report-table .rep-net td{background:#EFF6FF;font-weight:700;color:#1D4ED8;border-top:2px solid #BFDBFE}
 .rep-view-toggle{display:flex;gap:6px;margin-bottom:10px}
+#panel-report.active{display:flex!important;flex-direction:column;height:100%}
+#rep-view-year,#rep-view-qm{flex:1;overflow-y:auto;overflow-x:auto;-webkit-overflow-scrolling:touch;min-height:0}
 .rep-view-btn{flex:1;padding:7px 0;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-size:12px;cursor:pointer;font-weight:600;color:#374151}
 .rep-view-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
 .qm-table{border-collapse:collapse;font-size:11px;min-width:720px;width:100%}
@@ -1930,7 +1932,6 @@ function initReportNav(){
   const sel=document.getElementById('rep-month-selector');
   const labels=['年度','1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   sel.innerHTML=labels.map((l,i)=>`<button class="rep-month-btn${i===0?' active':''}" data-m="${i}" onclick="selectReportMonth(this)">${l}</button>`).join('');
-  adjustReportThead();
 }
 
 function selectReportMonth(btn){
@@ -2077,16 +2078,6 @@ function renderFinReport(){
   html+=`<tr class="rep-net"><td>淨利率</td><td>${netRateB}</td><td>${netRateA}</td><td></td><td></td><td></td><td></td></tr>`;
 
   document.getElementById('report-tbody').innerHTML=html;
-  adjustReportThead();
-}
-
-function adjustReportThead(){
-  requestAnimationFrame(()=>{
-    const ctrl=document.getElementById('rep-sticky-controls');
-    if(!ctrl) return;
-    const h=ctrl.getBoundingClientRect().height;
-    document.querySelectorAll('.report-table thead th').forEach(th=>{ th.style.top=h+'px'; });
-  });
 }
 
 function renderQMReport(){
