@@ -473,7 +473,8 @@ input[type=number]{-moz-appearance:textfield}
           <select class="filter-select" id="filter-method"><option value="">全部方式</option></select>
         </div>
         <div class="filter-row">
-          <select class="filter-select" id="filter-main" style="grid-column:1/-1"><option value="">全部類別</option></select>
+          <select class="filter-select" id="filter-main"><option value="">全部類別</option></select>
+          <select class="filter-select" id="filter-sub"><option value="">全部子類別</option></select>
         </div>
         <div class="split-pills" id="filter-split-pills">
           <button class="split-pill" data-val="vic">Vic 全額</button>
@@ -1104,6 +1105,15 @@ const KEY_MONTHLY_BUDGETS='vic2_monthly_budgets';
 function loadMonthlyBudgets(){ return load(KEY_MONTHLY_BUDGETS,{}); }
 function saveMonthlyBudgets(o){ save(KEY_MONTHLY_BUDGETS,o); }
 function loadMonthBudget(ym){ return loadMonthlyBudgets()[ym]||{}; }
+function loanBudgetValue(moB, loanName){
+  const key='loan:'+loanName;
+  return moB[key]!==undefined?moB[key]:moB.loan||0;
+}
+function loanBudgetTotal(moB){
+  const loans=loadLoans();
+  const sum=loans.reduce((s,l)=>s+(moB['loan:'+l.name]||0),0);
+  return sum||moB.loan||0;
+}
 function saveMonthBudgetItem(ym,cat,val){
   const all=loadMonthlyBudgets();
   if(!all[ym]) all[ym]={};
@@ -1342,14 +1352,40 @@ function populateEditForm(){
   fillSelect(document.getElementById('e-sub'), [], '（選填）');
 }
 
+function filterSubOptions(main=''){
+  const cats=loadCats(); const fixed=loadFixed(); const loans=loadLoans(); const mg=loadMG(); const plans=loadFinPlan();
+  const bank=mg['銀行帳戶']||[], ew=mg['電子錢包']||[], cc=mg['信用卡']||[];
+  let opts=[];
+  if(main){
+    if(main==='固定支出') opts=fixed.map(f=>f.name);
+    else if(main==='貸款') opts=loans.map(l=>l.name);
+    else if(main==='轉帳') opts=['轉帳手續費',...bank,...ew];
+    else if(main==='加值') opts=['現金',...bank,...ew,...cc];
+    else if(main==='繳信用卡款') opts=cc;
+    else if(plans.some(p=>p.name===main)) opts=[...bank,...ew];
+    else opts=cats[main]||[];
+  } else {
+    opts=[...Object.values(cats).flat(),...fixed.map(f=>f.name),...loans.map(l=>l.name),...cc,...bank,...ew];
+  }
+  loadRecords().forEach(r=>{ if(r.sub&&(!main||r.main===main)) opts.push(r.sub); });
+  return [...new Set(opts.filter(Boolean))];
+}
+
 function populateFilterDropdowns(){
   const cats=loadCats(); const income=loadIncome(); const methods=loadMethods();
+  const mainEl=document.getElementById('filter-main');
+  const subEl=document.getElementById('filter-sub');
+  const curMain=mainEl.value;
+  const curSub=subEl.value;
   fillSelect(document.getElementById('filter-type'), DEFAULT_TYPES, '全部分類');
   fillSelect(document.getElementById('filter-method'), methods, '全部方式');
   // build flat main list for filter
   const plans=loadFinPlan();
   const allMain=[...Object.keys(cats),'固定支出','繳信用卡款','貸款',...plans.map(p=>p.name),...income];
-  fillSelect(document.getElementById('filter-main'), allMain, '全部類別');
+  fillSelect(mainEl, allMain, '全部類別');
+  if([...mainEl.options].some(op=>op.value===curMain)) mainEl.value=curMain;
+  fillSelect(subEl, filterSubOptions(mainEl.value), '全部子類別');
+  if([...subEl.options].some(op=>op.value===curSub)) subEl.value=curSub;
 }
 
 // ─── Tab ───────────────────────────────────────────────────────────────────
@@ -1374,6 +1410,19 @@ function switchTab(name, btn){
 }
 
 // ─── Add Form ──────────────────────────────────────────────────────────────
+function applyLoanDefaults(fillAmount=false){
+  const amtEl=document.getElementById('f-amount');
+  const lpEl=document.getElementById('f-loan-p');
+  const ym=document.getElementById('f-date').value.slice(0,7);
+  const loanName=document.getElementById('f-sub').value;
+  if(fillAmount&&loanName){
+    const budget=loanBudgetValue(loadMonthBudget(ym),loanName);
+    if(budget) amtEl.value=fmtInput(-Math.abs(budget));
+  }
+  if(!lpEl.value) lpEl.value='-';
+  calcLoanInterest('f');
+}
+
 function initFormListeners(){
   const mainEl=document.getElementById('f-main');
   const subEl=document.getElementById('f-sub');
@@ -1384,10 +1433,13 @@ function initFormListeners(){
     const main=mainEl.value;
     updateSubByMain(main, subEl);
     document.getElementById('f-loan-extra').style.display=main==='貸款'?'block':'none';
-    if(main!=='貸款'){ lpEl.value=''; document.getElementById('f-loan-i').value=''; }
+    if(main==='貸款') applyLoanDefaults();
+    else { lpEl.value=''; document.getElementById('f-loan-i').value=''; }
   });
   subEl.addEventListener('change',()=>{
-    if(mainEl.value==='固定支出'&&subEl.value){
+    if(mainEl.value==='貸款'&&subEl.value){
+      applyLoanDefaults(true);
+    } else if(mainEl.value==='固定支出'&&subEl.value){
       const ym=document.getElementById('f-date').value.slice(0,7);
       const budget=loadMonthBudget(ym)['fixed:'+subEl.value];
       if(budget){
@@ -1399,6 +1451,7 @@ function initFormListeners(){
     }
   });
 
+  document.getElementById('f-date').addEventListener('change',()=>{ if(mainEl.value==='貸款') applyLoanDefaults(!!subEl.value); });
   lpEl.addEventListener('input',calcLoanInterest.bind(null,'f'));
   amtEl.addEventListener('input',()=>{ calcLoanInterest('f'); });
   amtEl.addEventListener('blur',()=>{ updateSharePreview(); });
@@ -1568,8 +1621,12 @@ function resetAddForm(){
 
 // ─── Records ───────────────────────────────────────────────────────────────
 function initSearchListeners(){
-  ['search-input','filter-type','filter-method','filter-main','filter-from','filter-to']
+  ['search-input','filter-type','filter-method','filter-sub','filter-from','filter-to']
     .forEach(id=>document.getElementById(id).addEventListener(id==='search-input'?'input':'change',()=>{ renderRecords(); updateClearBtn(); }));
+  document.getElementById('filter-main').addEventListener('change',()=>{
+    fillSelect(document.getElementById('filter-sub'), filterSubOptions(document.getElementById('filter-main').value), '全部子類別');
+    renderRecords(); updateClearBtn();
+  });
   document.getElementById('filter-split-pills').querySelectorAll('.split-pill').forEach(btn=>{
     btn.addEventListener('click',()=>{ btn.classList.toggle('active'); renderRecords(); updateClearBtn(); });
   });
@@ -1582,14 +1639,14 @@ function initSearchListeners(){
 function updateClearBtn(){
   const active=isGfFiltering()||
     document.getElementById('search-input').value.trim()||
-    ['filter-type','filter-method','filter-main'].some(id=>document.getElementById(id).value)||
+    ['filter-type','filter-method','filter-main','filter-sub'].some(id=>document.getElementById(id).value)||
     document.getElementById('filter-from').value||document.getElementById('filter-to').value||
     document.getElementById('filter-split-pills').querySelector('.split-pill.active');
   document.getElementById('filter-clear').style.display=active?'':'none';
 }
 function clearFilters(){
   document.getElementById('search-input').value='';
-  ['filter-type','filter-method','filter-main','filter-from','filter-to'].forEach(id=>{ document.getElementById(id).value=''; });
+  ['filter-type','filter-method','filter-main','filter-sub','filter-from','filter-to'].forEach(id=>{ document.getElementById(id).value=''; });
   document.getElementById('filter-split-pills').querySelectorAll('.split-pill.active').forEach(b=>b.classList.remove('active'));
   updateClearBtn(); renderRecords();
 }
@@ -1599,6 +1656,7 @@ function applyFilters(data){
   const ft=document.getElementById('filter-type').value;
   const fm=document.getElementById('filter-method').value;
   const fmain=document.getElementById('filter-main').value;
+  const fsub=document.getElementById('filter-sub').value;
   const ffrom=document.getElementById('filter-from').value;
   const fto=document.getElementById('filter-to').value;
   const activeSplits=[...document.getElementById('filter-split-pills').querySelectorAll('.split-pill.active')].map(b=>b.dataset.val);
@@ -1608,6 +1666,7 @@ function applyFilters(data){
     if(ft&&r.type!==ft) return false;
     if(fm&&r.method!==fm) return false;
     if(fmain&&r.main!==fmain) return false;
+    if(fsub&&r.sub!==fsub) return false;
     if(ffrom&&r.date<ffrom) return false;
     if(fto&&r.date>fto) return false;
     if(activeSplits.length&&!activeSplits.some(v=>splitMap[v](r))) return false;
@@ -2073,10 +2132,15 @@ function renderFinReport(){
     html+=row(item.name,b,a,key,'',expA_total);
   });
   if(loans.length){
-    const loanA=rec.filter(r=>r.main==='貸款').reduce((s,r)=>s+r.amount,0);
-    const loanB=getB('loan');
-    expB+=loanB; expA+=loanA;
-    html+=row('貸款',loanB,loanA,'loan','',expA_total);
+    loans.forEach((loan,idx)=>{
+      const key='loan:'+loan.name;
+      const b=moB[key]!==undefined?moB[key]:((idx===0&&moB.loan!==undefined)?moB.loan:0);
+      const a=rec.filter(r=>r.main==='貸款'&&r.sub===loan.name).reduce((s,r)=>s+r.amount,0);
+      expB+=b; expA+=a;
+      html+=row(loan.name,b,a,key,'',expA_total);
+    });
+    const unmatchedLoanA=rec.filter(r=>r.main==='貸款'&&!loans.some(l=>l.name===r.sub)).reduce((s,r)=>s+r.amount,0);
+    if(unmatchedLoanA){ expA+=unmatchedLoanA; html+=row('其他貸款',0,unmatchedLoanA,null,'',expA_total); }
   }
   html+=row('費用合計',expB,expA,null,'rep-tot',expA_total);
 
@@ -2113,7 +2177,7 @@ function renderQMReport(){
     const cost=costMains.reduce((s,c)=>s+(moB[c]||0),0);
     const exp=floatCats.reduce((s,c)=>s+(moB[c]||0),0)
       +fixed.reduce((s,f)=>s+(moB['fixed:'+f.name]||0),0)
-      +(moB['loan']||0);
+      +loanBudgetTotal(moB);
     return {inc,cost,exp,net:inc+cost+exp};
   };
 
@@ -2249,7 +2313,7 @@ function calcMonthlyBalanceDetail(data, prefix){
   const loanIsActual=loanRecs.length>0;
   const loanExp=loanIsActual
     ?loanRecs.reduce((s,r)=>s+r.amount,0)
-    :(moB['loan']||0);
+    :loanBudgetTotal(moB);
   return {
     income, floatExp, floatDetail,
     fixedExp, fixedActual, fixedEstimate,
@@ -3372,8 +3436,13 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.16';
+const APP_VERSION='2.17';
 const CHANGELOG=[
+  {version:'2.17',date:'2026-05-20',items:[
+    '記錄篩選新增子類別條件，並依主類別連動選項',
+    '報表貸款改為依設定中的貸款名稱逐列顯示與編輯預估',
+    '新增貸款時改為選完貸款子類別後，才自動帶入該貸款當月預估金額',
+  ]},
   {version:'2.16',date:'2026-05-20',items:[
     '修正固定支出設定新增、刪除與排序後，新增記帳子類別未同步更新的問題',
   ]},
