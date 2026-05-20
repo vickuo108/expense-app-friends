@@ -312,6 +312,8 @@ input[type=number]{-moz-appearance:textfield}
 #sync-dot.ok{display:block;background:#10B981}
 #sync-dot.syncing{display:block;background:#F59E0B;animation:sdpulse .8s infinite}
 #sync-dot.error{display:block;background:#EF4444}
+.header-sync-btn{margin-top:4px;padding:3px 9px;border:1px solid rgba(255,255,255,.45);border-radius:999px;background:rgba(255,255,255,.16);color:#fff;font-size:11px;font-weight:700;line-height:1.3;cursor:pointer;display:inline-flex;align-items:center;gap:3px;align-self:flex-end}
+.header-sync-btn:active{transform:scale(.97);background:rgba(255,255,255,.25)}
 @keyframes sdpulse{0%,100%{opacity:1}50%{opacity:.2}}
 </style>
 <!-- Firebase compat SDK -->
@@ -364,9 +366,12 @@ input[type=number]{-moz-appearance:textfield}
       <div class="header-title" id="app-title" contenteditable="true" spellcheck="false" onblur="saveAppTitle()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">Vic 記帳本 💰</div>
       <div class="header-sub" id="header-sub">載入中...</div>
     </div>
-    <div style="display:flex;align-items:center">
-      <div id="sync-dot" title="同步狀態"></div>
-      <div style="font-size:13px;opacity:.8" id="header-date"></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end">
+      <div style="display:flex;align-items:center">
+        <div id="sync-dot" title="同步狀態"></div>
+        <div style="font-size:13px;opacity:.8" id="header-date"></div>
+      </div>
+      <button class="header-sync-btn" onclick="manualSync()" type="button">☁️ 同步</button>
     </div>
   </div>
 
@@ -3436,8 +3441,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.17';
+const APP_VERSION='2.18';
 const CHANGELOG=[
+  {version:'2.18',date:'2026-05-20',items:[
+    'Header 日期下方新增同步按鈕，可從任一頁快速手動同步',
+  ]},
   {version:'2.17',date:'2026-05-20',items:[
     '記錄篩選新增子類別條件，並依主類別連動選項',
     '報表貸款改為依設定中的貸款名稱逐列顯示與編輯預估',
@@ -3853,6 +3861,7 @@ async function syncFromCloud(){
 }
 
 async function manualSync(){
+  if(!_fbUser){ showToast('請先登入後再同步'); return; }
   showToast('☁️ 同步中...'); await syncFromCloud(); await syncToCloud(); showToast('✅ 同步完成');
 }
 
