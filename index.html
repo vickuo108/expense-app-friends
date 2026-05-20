@@ -1703,9 +1703,10 @@ function renderRecords(){
     const total=filtered.reduce((s,r)=>s+r.amount,0);
     const exp=filtered.filter(r=>r.amount<0).reduce((s,r)=>s+r.amount,0);
     const inc=filtered.filter(r=>r.amount>0).reduce((s,r)=>s+r.amount,0);
-    const parts=[`共 ${filtered.length} 筆`,`總計 ${amtStr(total)}`];
-    if(inc) parts.push(`收入 ${fmt(inc)}`);
-    if(exp) parts.push(`支出 ${fmt(Math.abs(exp))}`);
+    const netText=total<0?`-${fmt(Math.abs(total))}`:fmt(total);
+    const parts=[`共 ${filtered.length} 筆`,`淨現流 ${netText}`];
+    if(inc) parts.push(`流入 ${fmt(inc)}`);
+    if(exp) parts.push(`流出 ${fmt(Math.abs(exp))}`);
     sumEl.innerHTML=parts.map(p=>`<span>${p}</span>`).join('');
     sumEl.style.display='flex';
     // category stats
@@ -3458,8 +3459,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.20';
+const APP_VERSION='2.21';
 const CHANGELOG=[
+  {version:'2.21',date:'2026-05-21',items:[
+    '記錄摘要改為顯示淨現流、流入與流出，淨流出時保留負號',
+  ]},
   {version:'2.20',date:'2026-05-21',items:[
     '修正跨日後 Header 日期未與新增表單日期同步更新的問題',
   ]},
