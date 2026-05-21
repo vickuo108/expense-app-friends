@@ -58,7 +58,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-top:4px;box-shadow:0 4px 12px var(--primary-s35)}
 .btn-submit:active{transform:scale(.98)}
 .search-row{display:flex;gap:8px;margin-bottom:10px}
-.records-sticky-top{position:sticky;top:0;z-index:80;background:#F0F2F5;margin:-12px -12px 10px;padding:12px 12px 6px}
+.records-sticky-top{position:sticky;top:0;z-index:80;background:#F0F2F5;margin:0 -12px 10px;padding:0 12px 6px}
 .search-input{flex:1;padding:10px 13px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;background:#fff}
 .search-input:focus{outline:none;border-color:var(--primary)}
 .filter-toggle{padding:10px 13px;border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;white-space:nowrap;color:#6B7280}
@@ -147,8 +147,8 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .gf-row:last-child{border-bottom:none}
 .gf-key{color:#6B7280}
 .gf-val{font-weight:700;color:#DC2626}
-.month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;background:#fff;border-radius:12px;padding:6px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-.month-nav-btn{background:none;border:1.5px solid #E5E7EB;border-radius:8px;padding:3px 10px;cursor:pointer;font-size:15px;color:#374151}
+.month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;background:#fff;border-radius:12px;padding:4px 10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.month-nav-btn{background:none;border:1.5px solid #E5E7EB;border-radius:8px;padding:2px 9px;cursor:pointer;font-size:15px;color:#374151}
 .month-label{font-size:16px;font-weight:800;color:#1A1A2E}
 
 /* Loan table */
@@ -172,7 +172,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .report-table .rep-tot td{background:#fff;font-weight:700;border-top:1.5px solid #D1D5DB}
 .report-table .rep-tot td:first-child{background:#fff}
 .report-table .rep-net td{background:#EFF6FF;font-weight:700;color:#1D4ED8;border-top:2px solid #BFDBFE}
-.rep-view-toggle{display:flex;gap:6px;margin-bottom:10px}
+.rep-view-toggle{display:flex;gap:6px;margin-bottom:0}
 #panel-report.active{display:flex!important;flex-direction:column}
 #rep-view-year,#rep-view-qm{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;min-height:0}
 .rep-view-btn{flex:1;padding:7px 0;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-size:12px;cursor:pointer;font-weight:600;color:#374151}
@@ -277,7 +277,7 @@ input[type=number]{-moz-appearance:textfield}
 .stats-quicknav{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
 .stats-quicknav::-webkit-scrollbar{display:none}
 .stats-sticky-top,.settings-sticky-top{position:sticky;top:0;z-index:80;background:#F0F2F5;margin-left:-12px;margin-right:-12px}
-.stats-sticky-top{margin-top:-12px;margin-bottom:8px;padding:12px 12px 2px}
+.stats-sticky-top{margin-top:0;margin-bottom:8px;padding:0 12px 2px}
 .settings-sticky-top{margin-top:-12px;margin-bottom:4px;padding:12px 12px 10px}
 .records-sticky-top,.stats-sticky-top,.settings-sticky-top{isolation:isolate}
 .records-sticky-top::before,.stats-sticky-top::before,.settings-sticky-top::before{content:"";position:absolute;left:0;right:0;top:-120px;bottom:0;background:#F0F2F5;z-index:0;pointer-events:none}
@@ -783,7 +783,7 @@ input[type=number]{-moz-appearance:textfield}
           <button class="rep-view-btn active" onclick="setRepView('year',this)">年度報表</button>
           <button class="rep-view-btn" onclick="setRepView('qm',this)">季&amp;月報表</button>
         </div>
-        <div id="rep-month-selector" style="display:flex;gap:6px;overflow-x:auto;padding:8px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none"></div>
+        <div id="rep-month-selector" style="display:flex;gap:6px;overflow-x:auto;padding:6px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none"></div>
         <div id="rep-copy-btn-wrap" style="display:none;margin-bottom:4px">
           <button onclick="copyLastMonthBudget()" style="padding:7px 14px;border:1.5px solid #CBD5E1;border-radius:8px;background:#fff;font-size:12px;color:#374151;cursor:pointer">📋 帶入上月預估</button>
         </div>
@@ -3482,8 +3482,13 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.23';
+const APP_VERSION='2.24';
 const CHANGELOG=[
+  {version:'2.24',date:'2026-05-22',items:[
+    '進一步降低統計與報表頁日期切換列高度',
+    '調整記錄與統計頁頂部灰色留白，與報表頁距離一致',
+    '縮小報表頁切換按鈕與月份列之間的灰色間距',
+  ]},
   {version:'2.23',date:'2026-05-22',items:[
     '降低統計與報表頁日期切換列高度，讓畫面更精簡',
   ]},
