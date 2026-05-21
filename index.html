@@ -58,6 +58,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .btn-submit{width:100%;padding:14px;background:linear-gradient(135deg,var(--primary),var(--primary-light));color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;margin-top:4px;box-shadow:0 4px 12px var(--primary-s35)}
 .btn-submit:active{transform:scale(.98)}
 .search-row{display:flex;gap:8px;margin-bottom:10px}
+.records-sticky-top{position:sticky;top:0;z-index:80;background:#F0F2F5;margin:-12px -12px 10px;padding:12px 12px 6px}
 .search-input{flex:1;padding:10px 13px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;background:#fff}
 .search-input:focus{outline:none;border-color:var(--primary)}
 .filter-toggle{padding:10px 13px;border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;white-space:nowrap;color:#6B7280}
@@ -275,6 +276,12 @@ input[type=number]{-moz-appearance:textfield}
 .back-top-btn:active{background:#F3F4F6}
 .stats-quicknav{display:flex;gap:6px;overflow-x:auto;padding:0 0 10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none}
 .stats-quicknav::-webkit-scrollbar{display:none}
+.stats-sticky-top,.settings-sticky-top{position:sticky;top:0;z-index:80;background:#F0F2F5;margin-left:-12px;margin-right:-12px}
+.stats-sticky-top{margin-top:-12px;margin-bottom:8px;padding:12px 12px 2px}
+.settings-sticky-top{margin-top:-12px;margin-bottom:4px;padding:12px 12px 10px}
+.records-sticky-top,.stats-sticky-top,.settings-sticky-top{isolation:isolate}
+.records-sticky-top::before,.stats-sticky-top::before,.settings-sticky-top::before{content:"";position:absolute;left:0;right:0;top:-120px;bottom:0;background:#F0F2F5;z-index:0;pointer-events:none}
+.records-sticky-top > *,.stats-sticky-top > *,.settings-sticky-top > *{position:relative;z-index:1}
 .stats-qnav-btn{flex-shrink:0;padding:5px 11px;border-radius:20px;border:1.5px solid #E5E7EB;background:#fff;font-size:12px;cursor:pointer;white-space:nowrap;color:#374151;font-weight:500}
 .stats-qnav-btn:active{background:var(--primary-tint);border-color:var(--primary);color:var(--primary)}
 .rep-budget-input{width:72px;padding:3px 5px;border:1.5px solid #CBD5E1;border-radius:6px;font-size:11px;text-align:right;background:#F8FAFC;color:#374151}
@@ -467,54 +474,58 @@ input[type=number]{-moz-appearance:textfield}
 
     <!-- ── 記錄 Panel ── -->
     <div class="panel" id="panel-records">
-      <div class="search-row">
-        <input type="text" class="search-input" id="search-input" placeholder="🔍 搜尋類別、備註、金額...">
-        <button class="filter-clear" id="filter-clear" style="display:none" onclick="clearFilters()">✕ 清除</button>
-        <button class="filter-toggle" id="filter-toggle">篩選</button>
+      <div class="records-sticky-top">
+        <div class="search-row">
+          <input type="text" class="search-input" id="search-input" placeholder="🔍 搜尋類別、備註、金額...">
+          <button class="filter-clear" id="filter-clear" style="display:none" onclick="clearFilters()">✕ 清除</button>
+          <button class="filter-toggle" id="filter-toggle">篩選</button>
+        </div>
+        <div class="filter-card" id="filter-card">
+          <div class="filter-row">
+            <select class="filter-select" id="filter-type"><option value="">全部分類</option></select>
+            <select class="filter-select" id="filter-method"><option value="">全部方式</option></select>
+          </div>
+          <div class="filter-row">
+            <select class="filter-select" id="filter-main"><option value="">全部類別</option></select>
+            <select class="filter-select" id="filter-sub"><option value="">全部子類別</option></select>
+          </div>
+          <div class="split-pills" id="filter-split-pills">
+            <button class="split-pill" data-val="vic">Vic 全額</button>
+            <button class="split-pill" data-val="half">各一半</button>
+            <button class="split-pill" data-val="gf">全女友</button>
+            <button class="split-pill" data-val="repay">女友還款</button>
+          </div>
+          <div class="filter-row">
+            <input type="date" class="filter-select" id="filter-from" min="1000-01-01" max="9999-12-31" style="font-size:13px">
+            <input type="date" class="filter-select" id="filter-to" min="1000-01-01" max="9999-12-31" style="font-size:13px">
+          </div>
+        </div>
+        <div id="records-summary" class="records-summary" style="display:none"></div>
       </div>
-      <div class="filter-card" id="filter-card">
-        <div class="filter-row">
-          <select class="filter-select" id="filter-type"><option value="">全部分類</option></select>
-          <select class="filter-select" id="filter-method"><option value="">全部方式</option></select>
-        </div>
-        <div class="filter-row">
-          <select class="filter-select" id="filter-main"><option value="">全部類別</option></select>
-          <select class="filter-select" id="filter-sub"><option value="">全部子類別</option></select>
-        </div>
-        <div class="split-pills" id="filter-split-pills">
-          <button class="split-pill" data-val="vic">Vic 全額</button>
-          <button class="split-pill" data-val="half">各一半</button>
-          <button class="split-pill" data-val="gf">全女友</button>
-          <button class="split-pill" data-val="repay">女友還款</button>
-        </div>
-        <div class="filter-row">
-          <input type="date" class="filter-select" id="filter-from" min="1000-01-01" max="9999-12-31" style="font-size:13px">
-          <input type="date" class="filter-select" id="filter-to" min="1000-01-01" max="9999-12-31" style="font-size:13px">
-        </div>
-      </div>
-      <div id="records-summary" class="records-summary" style="display:none"></div>
       <div id="records-cat-stats" style="display:none"></div>
       <div id="records-list"></div>
     </div>
 
     <!-- ── 統計 Panel ── -->
     <div class="panel" id="panel-stats">
-      <div class="month-nav">
-        <button class="month-nav-btn" id="stat-prev">‹</button>
-        <span class="month-label" id="stat-month-label"></span>
-        <button class="month-nav-btn" id="stat-next">›</button>
-      </div>
-      <div class="stats-quicknav">
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-income')">💰 本月收入</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-ewallet')">👛 電子錢包</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-float')">🛒 浮動支出</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-fixed-table')">🔒 固定支出</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-bank')">🏦 銀行</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-cc')">💳 信用卡</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-gf')">👭 女友</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('fin-plan-section')">📈 財務規劃</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('loan-section')">🏦 貸款</button>
-        <button class="stats-qnav-btn" onclick="statScrollTo('sec-charts')">📊 圖表</button>
+      <div class="stats-sticky-top">
+        <div class="month-nav">
+          <button class="month-nav-btn" id="stat-prev">‹</button>
+          <span class="month-label" id="stat-month-label"></span>
+          <button class="month-nav-btn" id="stat-next">›</button>
+        </div>
+        <div class="stats-quicknav">
+          <button class="stats-qnav-btn" onclick="statScrollTo('sec-income')">💰 本月收入</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('sec-ewallet')">👛 電子錢包</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('sec-float')">🛒 浮動支出</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('sec-fixed-table')">🔒 固定支出</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('sec-bank')">🏦 銀行</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('sec-cc')">💳 信用卡</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('sec-gf')">👭 女友</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('fin-plan-section')">📈 財務規劃</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('loan-section')">🏦 貸款</button>
+          <button class="stats-qnav-btn" onclick="statScrollTo('sec-charts')">📊 圖表</button>
+        </div>
       </div>
       <div class="stats-summary">
         <div class="stat-box">
@@ -660,21 +671,23 @@ input[type=number]{-moz-appearance:textfield}
 
     <!-- ── 設定 Panel ── -->
     <div class="panel" id="panel-settings">
-      <div class="stats-quicknav" style="margin-bottom:4px">
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-bank')">🏦 銀行</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-cc')">💳 信用卡</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-ewallet')">👛 電子錢包</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-cash')">💵 現金</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-income')">💰 收入類別</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-finplan')">📈 財務規劃</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-float')">🛒 浮動支出</button>
+      <div class="settings-sticky-top">
+        <div class="stats-quicknav">
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-bank')">🏦 銀行</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-cc')">💳 信用卡</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-ewallet')">👛 電子錢包</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-cash')">💵 現金</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-income')">💰 收入類別</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-finplan')">📈 財務規劃</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-float')">🛒 浮動支出</button>
 
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-fixed')">🔒 固定支出</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-loan')">🏦 貸款</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-cclimit')">💳 信用卡額度</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-backup')">🛠️ 維護與工具</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-theme')">🎨 顏色</button>
-        <button class="stats-qnav-btn" onclick="setScrollTo('ss-account')">👤 帳號</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-fixed')">🔒 固定支出</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-loan')">🏦 貸款</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-cclimit')">💳 信用卡額度</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-backup')">🛠️ 維護與工具</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-theme')">🎨 顏色</button>
+          <button class="stats-qnav-btn" onclick="setScrollTo('ss-account')">👤 帳號</button>
+        </div>
       </div>
 
       <div id="ss-bank" class="settings-section-title">🏦 銀行帳戶</div>
@@ -1605,7 +1618,7 @@ function submitAdd(){
   }
   if(isCCMethod(rec.method)&&document.getElementById('f-install-toggle').classList.contains('active')){
     const n=parseInt(document.getElementById('f-install-count').value);
-    if(n>=2) rec.installments=n;
+    if(n>=2){ rec.installments=n; rec.billedDate=date; }
   }
   const data=loadRecords(); data.push(rec); saveRecords(data);
   showToast('✅ 記帳成功！');
@@ -1964,8 +1977,11 @@ function saveEdit(){
   };
   if(isCCMethod(updated.method)&&document.getElementById('e-install-toggle').classList.contains('active')){
     const n=parseInt(document.getElementById('e-install-count').value);
-    if(n>=2) updated.installments=n; else delete updated.installments;
-  } else { delete updated.installments; }
+    if(n>=2){
+      updated.installments=n;
+      if(!updated.billedDate) updated.billedDate=updated.date;
+    } else { delete updated.installments; delete updated.billedDate; delete updated.paidInstallments; }
+  } else { delete updated.installments; delete updated.billedDate; delete updated.paidInstallments; }
   if(main==='貸款'){
     const p=parseAmt(document.getElementById('e-loan-p').value);
     const i=parseAmt(document.getElementById('e-loan-i').value);
@@ -2478,6 +2494,12 @@ function monthDiff(fromYm, toYm){
   const [ty,tm]=toYm.split('-').map(Number);
   return (ty-fy)*12+(tm-fm);
 }
+function autoInstallPaid(r, prefix){
+  if(r.paidInstallments!==undefined) return r.paidInstallments;
+  if(!r.billedDate) return 0;
+  const startYm=r.billedDate.slice(0,7);
+  return Math.max(0,Math.min(r.installments,monthDiff(startYm,prefix)+1));
+}
 function toggleCCInstall(id){
   const el=document.getElementById(id);
   if(el) el.classList.toggle('open');
@@ -2535,7 +2557,7 @@ function renderCCSection(data, prefix){
     const dueStr=lastPay?lastPay.date.slice(5).replace('-','/'):'';
     // 分期記錄（所有月份，此卡，有 installments，且尚未付清）
     const installRecs=data.filter(r=>r.method===name&&r.installments>1&&r.type!=='清償負債'
-      &&(r.paidInstallments===undefined||(r.paidInstallments<r.installments)));
+      &&autoInstallPaid(r,prefix)<r.installments);
     const detailId=`cc-install-${ci}`;
     const hasInstall=installRecs.length>0;
     const installDetail=hasInstall?`
@@ -2546,9 +2568,7 @@ function renderCCSection(data, prefix){
               <th>項目</th><th>購買日</th><th>總金額</th><th>月攤額</th><th>已付/總期</th><th>剩餘</th><th>入帳</th>
             </tr></thead>
             <tbody>${installRecs.sort((a,b)=>b.date.localeCompare(a.date)).map(r=>{
-              const purchaseYm=r.date.slice(0,7);
-              const elapsed=monthDiff(purchaseYm,prefix);
-              const paid=r.paidInstallments!==undefined?r.paidInstallments:Math.min(elapsed,r.installments);
+              const paid=autoInstallPaid(r,prefix);
               const remaining=r.installments-paid;
               const monthly=Math.round(r.amount/r.installments);
               const remainAmt=remaining*monthly;
@@ -3449,7 +3469,10 @@ function initBackToTopBtns(){
 function scrollToSection(id){
   const el=document.getElementById(id); if(!el) return;
   const content=document.getElementById('main-content');
-  const top=content.scrollTop+el.getBoundingClientRect().top-content.getBoundingClientRect().top-8;
+  const active=document.querySelector('.panel.active');
+  const sticky=active?.querySelector('.stats-sticky-top,.settings-sticky-top');
+  const offset=(sticky?.offsetHeight||0)+8;
+  const top=content.scrollTop+el.getBoundingClientRect().top-content.getBoundingClientRect().top-offset;
   content.scrollTo({top,behavior:'smooth'});
 }
 function statScrollTo(id){ scrollToSection(id); }
@@ -3459,8 +3482,12 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.21';
+const APP_VERSION='2.22';
 const CHANGELOG=[
+  {version:'2.22',date:'2026-05-22',items:[
+    '新增信用卡分期時自動設為已入帳，後續月份依期數自動累計已付期數',
+    '統計、設定與記錄頁上方控制區改為捲動時固定顯示，並補上遮罩避免內容穿透',
+  ]},
   {version:'2.21',date:'2026-05-21',items:[
     '記錄摘要改為顯示淨現流、流入與流出，淨流出時保留負號',
   ]},
