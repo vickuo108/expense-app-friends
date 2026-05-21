@@ -147,8 +147,8 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .gf-row:last-child{border-bottom:none}
 .gf-key{color:#6B7280}
 .gf-val{font-weight:700;color:#DC2626}
-.month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;background:#fff;border-radius:12px;padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-.month-nav-btn{background:none;border:1.5px solid #E5E7EB;border-radius:8px;padding:5px 12px;cursor:pointer;font-size:16px;color:#374151}
+.month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;background:#fff;border-radius:12px;padding:6px 12px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.month-nav-btn{background:none;border:1.5px solid #E5E7EB;border-radius:8px;padding:3px 10px;cursor:pointer;font-size:15px;color:#374151}
 .month-label{font-size:16px;font-weight:800;color:#1A1A2E}
 
 /* Loan table */
@@ -3482,8 +3482,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.22';
+const APP_VERSION='2.23';
 const CHANGELOG=[
+  {version:'2.23',date:'2026-05-22',items:[
+    '降低統計與報表頁日期切換列高度，讓畫面更精簡',
+  ]},
   {version:'2.22',date:'2026-05-22',items:[
     '新增信用卡分期時自動設為已入帳，後續月份依期數自動累計已付期數',
     '統計、設定與記錄頁上方控制區改為捲動時固定顯示，並補上遮罩避免內容穿透',
