@@ -1325,6 +1325,11 @@ function fillMainSelect(el, methodVal='', blank=true, typeVal=''){
     const ge=document.createElement('optgroup'); ge.label='電子錢包操作';
     const oe=document.createElement('option'); oe.value='加值'; oe.textContent='加值'; ge.appendChild(oe);
     el.appendChild(ge);
+    if(plans.length){
+      const g3=document.createElement('optgroup'); g3.label='財務規劃';
+      plans.forEach(p=>{ const op=document.createElement('option'); op.value=p.name; op.textContent=p.name; g3.appendChild(op); });
+      el.appendChild(g3);
+    }
     return;
   }
   const g1=document.createElement('optgroup'); g1.label='浮動支出';
@@ -1347,6 +1352,7 @@ function fillMainSelect(el, methodVal='', blank=true, typeVal=''){
   }
 }
 
+function isFinPlanName(name){ return loadFinPlan().some(p=>p.name===name); }
 function updateSubByMain(main, subEl, blank=true){
   const cats=loadCats(); const fixed=loadFixed(); const loans=loadLoans();
   const mg=loadMG(); const plans=loadFinPlan();
@@ -1460,6 +1466,7 @@ function initFormListeners(){
     document.getElementById('f-loan-extra').style.display=main==='貸款'?'block':'none';
     if(main==='貸款') applyLoanDefaults();
     else { lpEl.value=''; document.getElementById('f-loan-i').value=''; }
+    autoFillAmtSign();
   });
   subEl.addEventListener('change',()=>{
     if(mainEl.value==='貸款'&&subEl.value){
@@ -1556,9 +1563,12 @@ function initFormListeners(){
 
 function autoFillAmtSign(){
   const t=document.getElementById('f-type').value;
+  const main=document.getElementById('f-main').value;
   const el=document.getElementById('f-amount');
-  if((t==='費用'||t==='成本'||t==='清償負債'||t==='內部轉帳'||t==='投資')&&el.value==='') el.value='-';
-  if(t!=='費用'&&t!=='成本'&&t!=='清償負債'&&t!=='內部轉帳'&&t!=='投資'&&el.value==='-') el.value='';
+  const isPlanTransfer=t==='內部轉帳'&&isFinPlanName(main);
+  const shouldNegative=(t==='費用'||t==='成本'||t==='清償負債'||t==='投資'||(t==='內部轉帳'&&!isPlanTransfer));
+  if(shouldNegative&&el.value==='') el.value='-';
+  if((!shouldNegative||isPlanTransfer)&&el.value==='-') el.value='';
 }
 function calcLoanInterest(prefix){
   const amt=parseAmt(document.getElementById(`${prefix}-amount`).value);
@@ -3486,8 +3496,12 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.25';
+const APP_VERSION='2.26';
 const CHANGELOG=[
+  {version:'2.26',date:'2026-05-22',items:[
+    '內部轉帳新增財務規劃帳戶選項，可用於緊急預備金提領到銀行帳戶',
+    '財務規劃帳戶作為內部轉帳主類別時，金額不再自動帶入負號',
+  ]},
   {version:'2.25',date:'2026-05-22',items:[
     '新增頁支援按手機鍵盤完成鍵直接新增記帳',
   ]},
