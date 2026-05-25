@@ -496,7 +496,7 @@ input[type=number]{-moz-appearance:textfield}
           </div>
           <div class="split-pills" id="filter-split-pills">
             <button class="split-pill" data-val="vic">Vic 全額</button>
-            <button class="split-pill" data-val="half">各一半</button>
+            <button class="split-pill" data-val="half">各一半&自訂比例</button>
             <button class="split-pill" data-val="gf">全女友</button>
             <button class="split-pill" data-val="repay">女友還款</button>
           </div>
@@ -1724,7 +1724,7 @@ function applyFilters(data){
   const ffrom=document.getElementById('filter-from').value;
   const fto=document.getElementById('filter-to').value;
   const activeSplits=[...document.getElementById('filter-split-pills').querySelectorAll('.split-pill.active')].map(b=>b.dataset.val);
-  const splitMap={vic:r=>r.split===null,half:r=>r.split===1,gf:r=>r.split===0,repay:r=>r.split==='repay'};
+  const splitMap={vic:r=>r.split===null,half:r=>typeof r.split==='number'&&r.split>0&&r.split<=1,gf:r=>r.split===0,repay:r=>r.split==='repay'};
   return data.filter(r=>{
     if(q&&!`${r.main}${r.sub}${r.note}${r.method}${r.type}${r.amount}`.toLowerCase().includes(q)) return false;
     if(ft&&r.type!==ft) return false;
@@ -3524,8 +3524,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.28';
+const APP_VERSION='2.29';
 const CHANGELOG=[
+  {version:'2.29',date:'2026-05-25',items:[
+    '記錄篩選各一半改為包含自訂比例，並更新標籤文字',
+  ]},
   {version:'2.28',date:'2026-05-25',items:[
     '記錄篩選各一半或全女友時，摘要新增 Vic 與女友分攤金額',
   ]},
