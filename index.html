@@ -660,7 +660,7 @@ input[type=number]{-moz-appearance:textfield}
       <div id="ss-ewallet" class="settings-section-title">👛 電子錢包</div>
       <div class="list-editor" id="editor-ewallet" data-dgrp="電子錢包"></div>
 
-      <div id="ss-cash" class="settings-section-title">💵 現金 / 其他</div>
+      <div id="ss-cash" class="settings-section-title">💵 現金</div>
       <div style="font-size:12px;color:#9BA3AF;padding:0 4px 8px">設定期初現金金額，統計頁「可用現金」會自動加入此金額。</div>
       <div class="list-editor" id="editor-cash" data-dgrp="現金"></div>
 
@@ -2869,18 +2869,19 @@ function delCCLimit(id){
 function renderBalanceListEditor(containerId, list, groupKey, amtLabel){
   const el=document.getElementById(containerId);
   const bal=loadAcctBal();
+  if(groupKey==='現金') list=['現金'];
   const rows=list.map(item=>`
     <div class="list-item-row" data-dkey="${item}">
       <span class="list-item-name">${item}</span>
       <span class="inline-num-label">${amtLabel} $</span>
       <input type="number" class="inline-num" value="${bal[item]||''}" placeholder="0" min="0" step="1"
         onblur="saveAcctBalItem('${esc(item)}',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
-      <button class="list-item-del" onclick="balListDel('${containerId}','${esc(item)}','${groupKey}')">×</button>
+      ${groupKey==='現金'?'':`<button class="list-item-del" onclick="balListDel('${containerId}','${esc(item)}','${groupKey}')">×</button>`}
     </div>`).join('');
-  el.innerHTML=rows+`<div class="list-add-row">
+  el.innerHTML=rows+(groupKey==='現金'?'':`<div class="list-add-row">
     <input class="list-add-input" id="${containerId}-inp" placeholder="新增${groupKey}..." maxlength="20">
     <button class="list-add-btn" onclick="balListAdd('${containerId}','${groupKey}')">新增</button>
-  </div>`;
+  </div>`);
 }
 function saveAcctBalItem(name,val){
   const bal=loadAcctBal(); const n=parseFloat(val)||0;
@@ -3382,8 +3383,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.4';
+const APP_VERSION='friends-1.5';
 const CHANGELOG=[
+  {version:'friends-1.5',date:'2026-05-27',items:[
+    '設定頁現金區固定只保留現金項目，不再提供新增或刪除',
+  ]},
   {version:'friends-1.4',date:'2026-05-27',items:[
     '加值子類別會包含現金 / 其他區塊中的所有項目',
   ]},
