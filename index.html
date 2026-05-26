@@ -1299,11 +1299,11 @@ function isFinPlanName(name){ return loadFinPlan().some(p=>p.name===name); }
 function updateSubByMain(main, subEl, blank=true){
   const cats=loadCats(); const fixed=loadFixed(); const loans=loadLoans();
   const mg=loadMG(); const plans=loadFinPlan();
-  const bank=mg['銀行帳戶']||[]; const ew=mg['電子錢包']||[]; const cc=mg['信用卡']||[];
+  const cash=mg['現金']||[]; const bank=mg['銀行帳戶']||[]; const ew=mg['電子錢包']||[]; const cc=mg['信用卡']||[];
   if(main==='固定支出') fillSelect(subEl, fixed.map(f=>f.name), blank?'（選填）':'');
   else if(main==='貸款') fillSelect(subEl, loans.map(l=>l.name), blank?'（選填）':'');
   else if(main==='轉帳') fillSelect(subEl, ['轉帳手續費',...bank,...ew], blank?'（選填）':'');
-  else if(main==='加值') fillSelect(subEl, ['現金',...bank,...ew,...cc], blank?'（選填）':'');
+  else if(main==='加值') fillSelect(subEl, [...cash,...bank,...ew,...cc], blank?'（選填）':'');
   else if(main==='繳信用卡款') fillSelect(subEl, cc, blank?'（選填）':'');
   else if(plans.some(p=>p.name===main)) fillSelect(subEl, [...bank,...ew], blank?'（選填）':'');
   else fillSelect(subEl, cats[main]||[], blank?'（選填）':'');
@@ -1328,18 +1328,18 @@ function populateEditForm(){
 
 function filterSubOptions(main=''){
   const cats=loadCats(); const fixed=loadFixed(); const loans=loadLoans(); const mg=loadMG(); const plans=loadFinPlan();
-  const bank=mg['銀行帳戶']||[], ew=mg['電子錢包']||[], cc=mg['信用卡']||[];
+  const cash=mg['現金']||[], bank=mg['銀行帳戶']||[], ew=mg['電子錢包']||[], cc=mg['信用卡']||[];
   let opts=[];
   if(main){
     if(main==='固定支出') opts=fixed.map(f=>f.name);
     else if(main==='貸款') opts=loans.map(l=>l.name);
     else if(main==='轉帳') opts=['轉帳手續費',...bank,...ew];
-    else if(main==='加值') opts=['現金',...bank,...ew,...cc];
+    else if(main==='加值') opts=[...cash,...bank,...ew,...cc];
     else if(main==='繳信用卡款') opts=cc;
     else if(plans.some(p=>p.name===main)) opts=[...bank,...ew];
     else opts=cats[main]||[];
   } else {
-    opts=[...Object.values(cats).flat(),...fixed.map(f=>f.name),...loans.map(l=>l.name),...cc,...bank,...ew];
+    opts=[...Object.values(cats).flat(),...fixed.map(f=>f.name),...loans.map(l=>l.name),...cc,...bank,...ew,...cash];
   }
   loadRecords().forEach(r=>{ if(r.sub&&(!main||r.main===main)) opts.push(r.sub); });
   return [...new Set(opts.filter(Boolean))];
@@ -3382,8 +3382,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.3';
+const APP_VERSION='friends-1.4';
 const CHANGELOG=[
+  {version:'friends-1.4',date:'2026-05-27',items:[
+    '加值子類別會包含現金 / 其他區塊中的所有項目',
+  ]},
   {version:'friends-1.3',date:'2026-05-27',items:[
     '新註冊帳號清空設定時，現金區預設保留現金付款方式',
   ]},
