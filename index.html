@@ -1274,10 +1274,11 @@ function loadAppTitle(){
 
 function updateHeaderSub(){
   const data=loadRecords();
-  const pfx=localDateStr().slice(0,7);
-  const exp=data.filter(r=>r.date.startsWith(pfx)&&r.amount<0).reduce((s,r)=>s+r.amount,0);
-  const inc=data.filter(r=>r.date.startsWith(pfx)&&r.amount>0&&r.type==='收入').reduce((s,r)=>s+r.amount,0);
-  document.getElementById('header-sub').textContent=`本月支出 ${fmt(Math.abs(exp))} · 收入 ${fmt(inc)} · 共 ${data.length} 筆`;
+  const year=localDateStr().slice(0,4);
+  const yd=data.filter(r=>r.date.startsWith(year));
+  const exp=yd.filter(r=>r.amount<0).reduce((s,r)=>s+r.amount,0);
+  const inc=yd.filter(r=>r.amount>0&&r.type==='收入').reduce((s,r)=>s+r.amount,0);
+  document.getElementById('header-sub').textContent=`今年支出 ${fmt(Math.abs(exp))} · 收入 ${fmt(inc)} · 共 ${yd.length} 筆`;
 }
 
 // ─── Form population ───────────────────────────────────────────────────────
@@ -3524,8 +3525,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.29';
+const APP_VERSION='2.30';
 const CHANGELOG=[
+  {version:'2.30',date:'2026-05-26',items:[
+    'Header 摘要改為統一顯示今年支出、收入與筆數',
+  ]},
   {version:'2.29',date:'2026-05-25',items:[
     '記錄篩選各一半改為包含自訂比例，並更新標籤文字',
   ]},
