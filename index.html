@@ -6,9 +6,9 @@
 <meta name="theme-color" content="var(--primary)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Vic記帳">
+<meta name="apple-mobile-web-app-title" content="記帳本">
 <link rel="manifest" href="manifest.json">
-<title>Vic 記帳本</title>
+<title>記帳本</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
@@ -42,19 +42,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .amount-wrap{position:relative}
 .amount-currency{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#9BA3AF;font-size:15px;pointer-events:none}
 .amount-wrap .form-control{padding-left:28px}
-.split-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.split-grid .split-opt:nth-child(-n+3){grid-column:span 2}
-.split-grid .split-opt:nth-child(n+4){grid-column:span 3}
-.split-opt{padding:9px 6px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:13px;cursor:pointer;background:#fff;text-align:center;transition:all .2s;line-height:1.3}
-.split-opt small{display:block;font-size:10px;color:#9BA3AF;margin-top:2px}
-.split-opt.active{border-width:2px}
-.split-opt[data-v="null"].active{background:var(--primary-tint);border-color:var(--primary);color:var(--primary)}
-.split-opt[data-v="1"].active{background:#FFFBEB;border-color:#F59F00;color:#B45309}
-.split-opt[data-v="0"].active{background:#FFF1F2;border-color:#F43F5E;color:#BE123C}
-.split-opt[data-v="repay"].active{background:#DCFCE7;border-color:#16A34A;color:#15803D}
-.split-opt[data-v="custom"].active{background:#F5F3FF;border-color:#7C3AED;color:#7C3AED}
-.share-preview{background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:10px 13px;font-size:13px;color:#1D4ED8;margin-top:8px;display:none}
-.share-preview.show{display:block}
+.share-preview{display:none}
 .install-preview{background:#F5F3FF;border-color:#DDD6FE;color:#6D28D9;line-height:1.6}
 .install-preview-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
 .install-preview-pill{background:#fff;border:1px solid #DDD6FE;border-radius:999px;padding:1px 8px;font-size:12px;color:#6D28D9}
@@ -72,20 +60,16 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .filter-row:last-child{margin-bottom:0}
 .filter-select{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#fff;appearance:none;-webkit-appearance:none}
-.split-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.split-pill{padding:5px 11px;border:1.5px solid #E5E7EB;border-radius:20px;background:#fff;cursor:pointer;font-size:12px;color:#6B7280;white-space:nowrap}
-.split-pill.active{border-color:var(--primary);color:var(--primary);background:var(--primary-tint)}
 .records-summary{font-size:12px;color:#6B7280;padding:4px 2px 6px;display:flex;gap:12px;flex-wrap:wrap}
 .cat-stats-wrap{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .cat-stats-title{font-size:11px;font-weight:700;color:#9BA3AF;margin-bottom:8px}
-.cst-row{display:grid;grid-template-columns:1fr auto auto;gap:4px;align-items:center;padding:4px 0;border-bottom:1px solid #F3F4F6;font-size:12px}
+.cst-row{display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center;padding:4px 0;border-bottom:1px solid #F3F4F6;font-size:12px}
 .cst-row:last-child{border-bottom:none}
 .cst-head{font-size:10px;font-weight:700;color:#9BA3AF;border-bottom:1px solid #E5E7EB !important}
 .cst-main-row{font-weight:600;color:#374151}
 .cst-sub-row{padding-left:12px;color:#6B7280}
 .cst-amt{text-align:right;min-width:60px;font-variant-numeric:tabular-nums}
 .cst-vic{color:#3B82F6}
-.cst-gf{color:#EC4899}
 .date-group-label{font-size:11px;color:#9BA3AF;font-weight:600;padding:10px 4px 4px;letter-spacing:.5px}
 .date-year-label{font-size:13px;color:#6B7280;font-weight:700;padding:16px 4px 2px;letter-spacing:.5px}
 .tx-swipe-wrap{position:relative;overflow:hidden}
@@ -106,11 +90,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .tx-meta{font-size:11px;color:#9BA3AF;margin-top:2px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .tx-right{text-align:right;flex-shrink:0}
 .tx-amount-val{font-size:15px;font-weight:700}
-.tx-vic-share{font-size:10px;color:#9BA3AF;margin-top:2px}
 .badge{display:inline-flex;align-items:center;padding:1px 5px;border-radius:4px;font-size:9px;font-weight:700}
-.badge-gf{background:#FEE2E2;color:#DC2626}
-.badge-half{background:#FEF3C7;color:#D97706}
-.badge-repay{background:#DCFCE7;color:#16A34A}
 .badge-install{background:#EDE9FE;color:#7C3AED}
 .install-toggle-btn{padding:9px 14px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:13px;cursor:pointer;background:#fff;color:#6B7280}
 .install-toggle-btn.active{background:#EDE9FE;border-color:#7C3AED;color:#7C3AED;border-width:2px}
@@ -149,12 +129,6 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .chart-card{background:#fff;border-radius:14px;padding:16px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .chart-title{font-size:14px;font-weight:700;margin-bottom:12px;color:#374151}
 .chart-wrap{position:relative;height:200px}
-.gf-summary{background:linear-gradient(135deg,#FFF1F2,#FFE4E6);border:1px solid #FECDD3;border-radius:14px;padding:14px;margin-bottom:10px}
-.gf-title{font-size:13px;color:#9F1239;font-weight:700;margin-bottom:8px}
-.gf-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #FECDD3;font-size:13px}
-.gf-row:last-child{border-bottom:none}
-.gf-key{color:#6B7280}
-.gf-val{font-weight:700;color:#DC2626}
 .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;background:#fff;border-radius:12px;padding:4px 10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .month-nav-btn{background:none;border:1.5px solid #E5E7EB;border-radius:8px;padding:2px 9px;cursor:pointer;font-size:15px;color:#374151}
 .month-label{font-size:16px;font-weight:800;color:#1A1A2E}
@@ -321,6 +295,9 @@ input[type=number]{-moz-appearance:textfield}
 .login-btn:disabled{opacity:.6;cursor:default}
 .login-switch{text-align:center;font-size:13px;color:#9BA3AF}
 .login-switch b{color:var(--primary);cursor:pointer;font-weight:600}
+.login-forgot{text-align:center;margin-top:10px}
+.login-forgot button{border:none;background:transparent;color:#6B7280;font-size:13px;font-weight:600;cursor:pointer;padding:4px 8px}
+.login-forgot button:active{color:var(--primary)}
 .login-error{color:#EF4444;font-size:13px;text-align:center;margin-top:8px;min-height:18px}
 /* ── 同步指示點 ── */
 #sync-dot{width:8px;height:8px;border-radius:50%;background:#10B981;flex-shrink:0;margin-right:4px;display:none}
@@ -341,12 +318,13 @@ input[type=number]{-moz-appearance:textfield}
 <div id="login-overlay">
   <div class="login-card">
     <div class="login-logo">💰</div>
-    <div class="login-title">Vic 記帳本</div>
+    <div class="login-title">記帳本</div>
     <div class="login-sub" id="login-mode-sub">登入以同步資料</div>
     <input class="login-input" id="login-email" type="email" placeholder="Email" autocomplete="email" inputmode="email">
     <input class="login-input" id="login-password" type="password" placeholder="密碼" autocomplete="current-password">
     <button class="login-btn" id="login-submit-btn" onclick="doAuthSubmit()">登入</button>
     <div class="login-switch"><span id="login-switch-text">還沒有帳號？</span><b onclick="toggleAuthMode()">註冊</b></div>
+    <div class="login-forgot" id="login-forgot-wrap"><button type="button" onclick="showPasswordReset()">忘記密碼？</button></div>
     <div class="login-error" id="login-error"></div>
   </div>
 </div>
@@ -378,7 +356,7 @@ input[type=number]{-moz-appearance:textfield}
 
   <div class="header">
     <div>
-      <div class="header-title" id="app-title" contenteditable="true" spellcheck="false" onblur="saveAppTitle()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">Vic 記帳本 💰</div>
+      <div class="header-title" id="app-title" contenteditable="true" spellcheck="false" onblur="saveAppTitle()" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur()}">記帳本 💰</div>
       <div class="header-sub" id="header-sub">載入中...</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end">
@@ -462,22 +440,6 @@ input[type=number]{-moz-appearance:textfield}
           <label class="form-label">備註</label>
           <input type="text" enterkeyhint="done" form="add-form" class="form-control" id="f-note" placeholder="選填">
         </div>
-        <div class="form-group">
-          <label class="form-label">女友分攤</label>
-          <div class="split-grid">
-            <button class="split-opt active" data-v="null" onmousedown="event.preventDefault()">👤 我全部</button>
-            <button class="split-opt" data-v="1" onmousedown="event.preventDefault()">👭 各一半</button>
-            <button class="split-opt" data-v="0" onmousedown="event.preventDefault()">👩 全女友</button>
-            <button class="split-opt" data-v="custom" onmousedown="event.preventDefault()">🔢 自訂比例</button>
-            <button class="split-opt" data-v="repay" onmousedown="event.preventDefault()">💸 女友已分攤</button>
-          </div>
-          <div id="f-custom-wrap" style="display:none;align-items:center;gap:8px;margin-top:6px">
-            <span style="font-size:13px;color:#6B7280">女友比例</span>
-            <input type="number" class="form-control" id="f-custom-pct" placeholder="0~100" min="0" max="100" step="1" style="width:80px">
-            <span style="font-size:13px;color:#6B7280">%</span>
-          </div>
-          <div class="share-preview" id="share-preview"></div>
-        </div>
         <button class="btn-submit" id="btn-add-submit">➕ 新增記帳</button>
       </div>
     </div>
@@ -498,12 +460,6 @@ input[type=number]{-moz-appearance:textfield}
           <div class="filter-row">
             <select class="filter-select" id="filter-main"><option value="">全部類別</option></select>
             <select class="filter-select" id="filter-sub"><option value="">全部子類別</option></select>
-          </div>
-          <div class="split-pills" id="filter-split-pills">
-            <button class="split-pill" data-val="vic">Vic 全額</button>
-            <button class="split-pill" data-val="half">各一半&自訂比例</button>
-            <button class="split-pill" data-val="gf">全女友</button>
-            <button class="split-pill" data-val="repay">女友還款</button>
           </div>
           <div class="filter-row">
             <input type="date" class="filter-select" id="filter-from" min="1000-01-01" max="9999-12-31" style="font-size:13px">
@@ -531,7 +487,6 @@ input[type=number]{-moz-appearance:textfield}
           <button class="stats-qnav-btn" onclick="statScrollTo('sec-fixed-table')">🔒 固定支出</button>
           <button class="stats-qnav-btn" onclick="statScrollTo('sec-bank')">🏦 銀行</button>
           <button class="stats-qnav-btn" onclick="statScrollTo('sec-cc')">💳 信用卡</button>
-          <button class="stats-qnav-btn" onclick="statScrollTo('sec-gf')">👭 女友</button>
           <button class="stats-qnav-btn" onclick="statScrollTo('fin-plan-section')">📈 財務規劃</button>
           <button class="stats-qnav-btn" onclick="statScrollTo('loan-section')">🏦 貸款</button>
           <button class="stats-qnav-btn" onclick="statScrollTo('sec-charts')">📊 圖表</button>
@@ -541,7 +496,6 @@ input[type=number]{-moz-appearance:textfield}
         <div class="stat-box">
           <div class="stat-box-label">本月支出</div>
           <div class="stat-box-val clr-expense" id="s-expense">$0</div>
-          <div class="stat-box-sub">Vic 實際 <span id="s-vic-expense">$0</span></div>
         </div>
         <div class="stat-box">
           <div class="stat-box-label">本月收入</div>
@@ -627,10 +581,6 @@ input[type=number]{-moz-appearance:textfield}
             <tbody id="cc-table-body"></tbody>
           </table>
         </div>
-      </div>
-      <div class="gf-summary" id="sec-gf">
-        <div class="gf-title">👭 女友應還款項</div>
-        <div id="gf-rows"></div>
       </div>
       <div class="chart-card" id="fin-plan-section">
         <div class="chart-title">📈 財務規劃帳戶</div>
@@ -753,6 +703,11 @@ input[type=number]{-moz-appearance:textfield}
         <div class="s-text"><div class="s-title">清除所有記帳資料</div><div class="s-desc">不可復原，請先備份</div></div>
         <span class="s-arrow" style="color:#EF4444">›</span>
       </button>
+      <button class="settings-btn" onclick="confirmClearAllDataAndSettings()">
+        <div class="s-icon" style="background:#FFF1F2">🧹</div>
+        <div class="s-text"><div class="s-title">清空全部資料與設定</div><div class="s-desc">所有設定區塊清成空白，僅保留新增列</div></div>
+        <span class="s-arrow" style="color:#EF4444">›</span>
+      </button>
       <button class="settings-btn" onclick="checkForUpdate()">
         <div class="s-icon" style="background:#F0F9FF">🔄</div>
         <div class="s-text"><div class="s-title">檢查更新</div><div class="s-desc">手動觸發 App 更新，更新後自動重新載入</div></div>
@@ -779,7 +734,7 @@ input[type=number]{-moz-appearance:textfield}
         </div>
       </div>
 
-      <div style="text-align:center;font-size:11px;color:#D1D5DB;margin-top:20px;padding-bottom:8px">Vic 記帳本 v1.0 · 2026</div>
+      <div style="text-align:center;font-size:11px;color:#D1D5DB;margin-top:20px;padding-bottom:8px">記帳本 · 2026</div>
     </div>
 
     <!-- ── 財務報表 Panel ── -->
@@ -940,21 +895,6 @@ input[type=number]{-moz-appearance:textfield}
       <label class="form-label">備註</label>
       <input type="text" class="form-control" id="e-note">
     </div>
-    <div class="form-group">
-      <label class="form-label">女友分攤</label>
-      <div class="split-grid">
-        <button class="split-opt" data-v="null" onclick="editSelectSplit(this)">👤 我全部</button>
-        <button class="split-opt" data-v="1" onclick="editSelectSplit(this)">👭 各一半</button>
-        <button class="split-opt" data-v="0" onclick="editSelectSplit(this)">👩 全女友</button>
-        <button class="split-opt" data-v="custom" onclick="editSelectSplit(this)">🔢 自訂比例</button>
-        <button class="split-opt" data-v="repay" onclick="editSelectSplit(this)">💸 女友已分攤</button>
-      </div>
-      <div id="e-custom-wrap" style="display:none;align-items:center;gap:8px;margin-top:6px">
-        <span style="font-size:13px;color:#6B7280">女友比例</span>
-        <input type="number" class="form-control" id="e-custom-pct" placeholder="0~100" min="0" max="100" step="1" style="width:80px" oninput="editCustomPctChanged()">
-        <span style="font-size:13px;color:#6B7280">%</span>
-      </div>
-    </div>
     <div class="modal-actions">
       <button class="btn btn-danger" id="btn-delete">🗑 刪除</button>
       <button class="btn btn-primary" id="btn-save">💾 儲存</button>
@@ -983,7 +923,9 @@ const THEMES=[
   {id:'rose',  name:'玫瑰', primary:'#E11D48',light:'#F43F5E',darker:'#BE123C',tint:'#FFF1F2',deep:'#881337',border:'#FECDD3',s12:'rgba(225,29,72,.12)', s20:'rgba(225,29,72,.20)', s25:'rgba(225,29,72,.25)', s35:'rgba(225,29,72,.35)'},
   {id:'amber', name:'橙',   primary:'#D97706',light:'#F59E0B',darker:'#B45309',tint:'#FFFBEB',deep:'#78350F',border:'#FDE68A',s12:'rgba(217,119,6,.12)', s20:'rgba(217,119,6,.20)', s25:'rgba(217,119,6,.25)', s35:'rgba(217,119,6,.35)'},
 ];
-const KEY_THEME='vic2_theme';
+const FRIENDS_CLOUD_DOC='friends-main';
+const FRIENDS_FIREBASE_APP='expenseFriends';
+const KEY_THEME='friends_theme';
 function applyTheme(id){
   const t=THEMES.find(x=>x.id===id)||THEMES[0];
   const r=document.documentElement.style;
@@ -1063,20 +1005,21 @@ function catBg(c){ return CAT_BG[c]||'bg-other'; }
 function catIcon(c){ return CAT_ICONS[c]||'💸'; }
 
 // ─── Storage ───────────────────────────────────────────────────────────────
-const KEY_RECORDS  = 'vic2_records';
-const KEY_MG       = 'vic2_methods_grouped';
-const KEY_CATS     = 'vic2_categories';
-const KEY_INCOME   = 'vic2_income_cats';
-const KEY_FIXED    = 'vic2_fixed';
-const KEY_FIXED_GROUPS='vic2_fixed_groups';
+const KEY_RECORDS  = 'friends_records';
+const KEY_BLANK_ACCOUNT = 'friends_blank_account';
+const KEY_MG       = 'friends_methods_grouped';
+const KEY_CATS     = 'friends_categories';
+const KEY_INCOME   = 'friends_income_cats';
+const KEY_FIXED    = 'friends_fixed';
+const KEY_FIXED_GROUPS='friends_fixed_groups';
 const DEFAULT_FIXED_GROUPS=['住房','保險','訂閱服務','其他'];
-const KEY_LOANS    = 'vic2_loans';
-const KEY_LOAN_PRIN = 'vic2_loan_prin';  // {loanId_YYYY-MM: positiveAmount}
-const KEY_ACCT_BAL  = 'vic2_acct_bal';
-const KEY_ACCT_AVAIL= 'vic2_acct_avail';
-const KEY_CC_DUE    = 'vic2_cc_due';
-const KEY_CC_LIMITS = 'vic2_cc_limits';
-const KEY_FIN_PLAN  = 'vic2_fin_plan';
+const KEY_LOANS    = 'friends_loans';
+const KEY_LOAN_PRIN = 'friends_loan_prin';  // {loanId_YYYY-MM: positiveAmount}
+const KEY_ACCT_BAL  = 'friends_acct_bal';
+const KEY_ACCT_AVAIL= 'friends_acct_avail';
+const KEY_CC_DUE    = 'friends_cc_due';
+const KEY_CC_LIMITS = 'friends_cc_limits';
+const KEY_FIN_PLAN  = 'friends_fin_plan';
 
 const DEFAULT_CC_LIMITS = [
   {id:'cl01',name:'永豐',amount:150000},{id:'cl02',name:'國泰',amount:120000},
@@ -1102,22 +1045,25 @@ const clone = v => JSON.parse(JSON.stringify(v));
 function loadRecords(){ return load(KEY_RECORDS, []); }
 function saveRecords(a){ save(KEY_RECORDS, a); }
 
-function loadMG(){ return load(KEY_MG, DEFAULT_METHODS_GROUPED); }
+function isBlankAccount(){ return localStorage.getItem(KEY_BLANK_ACCOUNT)==='1'; }
+function blankDefault(v){ return isBlankAccount()?clone(v):null; }
+
+function loadMG(){ return load(KEY_MG, blankDefault({})||DEFAULT_METHODS_GROUPED); }
 function saveMG(o){ save(KEY_MG, o); }
 function loadMethods(){ return Object.values(loadMG()).flat(); }
 
-function loadCats(){ return load(KEY_CATS, DEFAULT_FLOAT_CATS); }
+function loadCats(){ return load(KEY_CATS, blankDefault({})||DEFAULT_FLOAT_CATS); }
 function saveCats(o){ save(KEY_CATS, o); }
 
-function loadIncome(){ return load(KEY_INCOME, DEFAULT_INCOME_CATS); }
+function loadIncome(){ return load(KEY_INCOME, blankDefault([])||DEFAULT_INCOME_CATS); }
 function saveIncome(a){ save(KEY_INCOME, a); }
 
-function loadFixed(){ return load(KEY_FIXED, DEFAULT_FIXED); }
+function loadFixed(){ return load(KEY_FIXED, blankDefault([])||DEFAULT_FIXED); }
 function saveFixed(a){ save(KEY_FIXED, a); }
-function loadFixedGroups(){ return load(KEY_FIXED_GROUPS, DEFAULT_FIXED_GROUPS); }
+function loadFixedGroups(){ return load(KEY_FIXED_GROUPS, blankDefault([])||DEFAULT_FIXED_GROUPS); }
 function saveFixedGroups(a){ save(KEY_FIXED_GROUPS, a); }
 
-function loadLoans(){ return load(KEY_LOANS, DEFAULT_LOANS); }
+function loadLoans(){ return load(KEY_LOANS, blankDefault([])||DEFAULT_LOANS); }
 function saveLoans(a){ save(KEY_LOANS, a); }
 function loadLoanPrin(){ return load(KEY_LOAN_PRIN, {}); }
 function saveLoanPrin(o){ save(KEY_LOAN_PRIN, o); }
@@ -1127,14 +1073,14 @@ function loadAcctAvail(){ return load(KEY_ACCT_AVAIL, {}); }
 function saveAcctAvail(o){ save(KEY_ACCT_AVAIL, o); }
 function loadCCDue(){ return load(KEY_CC_DUE, {}); }
 function saveCCDue(o){ save(KEY_CC_DUE, o); }
-function loadCCLimits(){ return load(KEY_CC_LIMITS, DEFAULT_CC_LIMITS); }
+function loadCCLimits(){ return load(KEY_CC_LIMITS, blankDefault([])||DEFAULT_CC_LIMITS); }
 function saveCCLimits(a){ save(KEY_CC_LIMITS, a); }
-function loadFinPlan(){ return load(KEY_FIN_PLAN, DEFAULT_FIN_PLAN); }
+function loadFinPlan(){ return load(KEY_FIN_PLAN, blankDefault([])||DEFAULT_FIN_PLAN); }
 function saveFinPlan(a){ save(KEY_FIN_PLAN, a); }
-const KEY_BUDGETS='vic2_budgets';
+const KEY_BUDGETS='friends_budgets';
 function loadBudgets(){ return load(KEY_BUDGETS,{}); }
 function saveBudgets(o){ save(KEY_BUDGETS,o); }
-const KEY_MONTHLY_BUDGETS='vic2_monthly_budgets';
+const KEY_MONTHLY_BUDGETS='friends_monthly_budgets';
 function loadMonthlyBudgets(){ return load(KEY_MONTHLY_BUDGETS,{}); }
 function saveMonthlyBudgets(o){ save(KEY_MONTHLY_BUDGETS,o); }
 function loadMonthBudget(ym){ return loadMonthlyBudgets()[ym]||{}; }
@@ -1158,51 +1104,33 @@ function saveMonthBudgetItem(ym,cat,val){
 
 function genId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 
-// ─── GF helpers ────────────────────────────────────────────────────────────
-function vicShare(amount, split){
-  if(split==='repay') return amount;
-  if(split===0) return 0;
-  if(split===1) return amount/2;
-  if(typeof split==='number'&&split>0&&split<1) return amount*split;
-  return amount;
-}
-function gfOwes(amount, split){
-  if(split===0) return Math.abs(amount);
-  if(split===1) return Math.abs(amount)/2;
-  if(typeof split==='number'&&split>0&&split<1) return Math.abs(amount)*(1-split);
-  return 0;
-}
-function gfRepaid(amount, split){
-  return split==='repay'?Math.abs(amount):0;
-}
-
 // ─── State ─────────────────────────────────────────────────────────────────
-let addSplit=null, editSplit=null, currentEditId=null;
+let currentEditId=null;
 let statYear=new Date().getFullYear(), statMonth=new Date().getMonth()+1;
 let fixedChart=null, floatPieChart=null, finChart=null, ccBarChart=null;
 
 // ─── Init ──────────────────────────────────────────────────────────────────
 function migrateData(){
   // 將 localStorage 裡的舊 key '銀行存款' 改為 '銀行帳戶'
-  const raw=localStorage.getItem('vic2_methods_grouped');
+  const raw=localStorage.getItem(KEY_MG);
   if(raw){
     try{
       const mg=JSON.parse(raw);
       if('銀行存款' in mg && !('銀行帳戶' in mg)){
         mg['銀行帳戶']=mg['銀行存款'];
         delete mg['銀行存款'];
-        localStorage.setItem('vic2_methods_grouped',JSON.stringify(mg));
+        localStorage.setItem(KEY_MG,JSON.stringify(mg));
       }
     }catch(e){}
   }
   // 重設主類別/子類別為 Excel 匯入版本（僅執行一次）
-  if(!localStorage.getItem('vic2_migrated_cats_v1')){
-    localStorage.removeItem('vic2_categories');
-    localStorage.setItem('vic2_migrated_cats_v1','1');
+  if(!localStorage.getItem('friends_migrated_cats_v1')){
+    localStorage.removeItem(KEY_CATS);
+    localStorage.setItem('friends_migrated_cats_v1','1');
   }
   // 重排付款方式分組順序：現金 > 信用卡 > 銀行帳戶 > 電子錢包（僅執行一次）
-  if(!localStorage.getItem('vic2_migrated_mg_order_v2')){
-    const rawMG=localStorage.getItem('vic2_methods_grouped');
+  if(!localStorage.getItem('friends_migrated_mg_order_v2')){
+    const rawMG=localStorage.getItem(KEY_MG);
     if(rawMG){
       try{
         const mg=JSON.parse(rawMG);
@@ -1210,10 +1138,10 @@ function migrateData(){
         const reordered={};
         order.forEach(k=>{ if(mg[k]) reordered[k]=mg[k]; });
         Object.keys(mg).forEach(k=>{ if(!reordered[k]) reordered[k]=mg[k]; });
-        localStorage.setItem('vic2_methods_grouped',JSON.stringify(reordered));
+        localStorage.setItem(KEY_MG,JSON.stringify(reordered));
       }catch(e){}
     }
-    localStorage.setItem('vic2_migrated_mg_order_v2','1');
+    localStorage.setItem('friends_migrated_mg_order_v2','1');
   }
 }
 
@@ -1270,12 +1198,12 @@ function initHeader(){
   refreshTodayUI();
   loadAppTitle();
 }
-const KEY_APP_NAME='vic2_app_name';
+const KEY_APP_NAME='friends_app_name';
 function saveAppTitle(){
   const el=document.getElementById('app-title');
   const v=el.textContent.trim();
   if(v){ localStorage.setItem(KEY_APP_NAME,v); document.querySelector('.login-title').textContent=v; }
-  else el.textContent=localStorage.getItem(KEY_APP_NAME)||'Vic 記帳本 💰';
+  else el.textContent=localStorage.getItem(KEY_APP_NAME)||'記帳本 💰';
 }
 function loadAppTitle(){
   const v=localStorage.getItem(KEY_APP_NAME);
@@ -1502,40 +1430,8 @@ function initFormListeners(){
   document.getElementById('f-date').addEventListener('change',()=>{ if(mainEl.value==='貸款') applyLoanDefaults(!!subEl.value); });
   lpEl.addEventListener('input',calcLoanInterest.bind(null,'f'));
   amtEl.addEventListener('input',()=>{ calcLoanInterest('f'); updateInstallPreview(); });
-  amtEl.addEventListener('blur',()=>{ updateSharePreview(); updateInstallPreview(); });
+  amtEl.addEventListener('blur',updateInstallPreview);
   document.getElementById('f-install-count').addEventListener('input',updateInstallPreview);
-
-  document.querySelectorAll('#panel-add .split-opt').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const fWrap=document.getElementById('f-custom-wrap');
-      if(btn.dataset.v==='custom'){
-        const alreadyActive=btn.classList.contains('active');
-        if(alreadyActive){
-          // 收回：切回「我全部」
-          btn.classList.remove('active');
-          document.querySelector('#panel-add .split-opt[data-v="null"]').classList.add('active');
-          fWrap.style.display='none';
-          addSplit=null;
-        } else {
-          document.querySelectorAll('#panel-add .split-opt').forEach(b=>b.classList.remove('active'));
-          btn.classList.add('active');
-          fWrap.style.display='flex';
-          const pct=parseFloat(document.getElementById('f-custom-pct').value);
-          addSplit=(!isNaN(pct)&&pct>=0&&pct<=100)?(1-pct/100):null;
-        }
-      } else {
-        document.querySelectorAll('#panel-add .split-opt').forEach(b=>b.classList.remove('active'));
-        btn.classList.add('active');
-        fWrap.style.display='none';
-        addSplit=btn.dataset.v==='null'?null:btn.dataset.v==='repay'?'repay':Number(btn.dataset.v);
-      }
-      updateSharePreview();
-    });
-  });
-  document.getElementById('f-custom-pct').addEventListener('input',()=>{
-    const pct=parseFloat(document.getElementById('f-custom-pct').value);
-    if(!isNaN(pct)&&pct>=0&&pct<=100){ addSplit=1-pct/100; updateSharePreview(); }
-  });
 
   document.getElementById('f-method').addEventListener('change',()=>{
     const methodVal=document.getElementById('f-method').value;
@@ -1595,18 +1491,6 @@ function calcLoanInterest(prefix){
 }
 
 function updateSharePreview(){
-  const amt=parseAmt(document.getElementById('f-amount').value);
-  const prev=document.getElementById('share-preview');
-  if(addSplit===null||amt===0){ prev.classList.remove('show'); return; }
-  prev.classList.add('show');
-  if(addSplit==='repay'){
-    prev.style.cssText='background:#F0FDF4;border-color:#BBF7D0;color:#15803D';
-    prev.textContent=`女友已分攤 ${fmt(Math.abs(amt))}，從累計欠款中扣除`;
-  } else {
-    prev.style.cssText='';
-    const vic=vicShare(amt,addSplit), gf=gfOwes(amt,addSplit);
-    prev.textContent=`Vic 實際支出：${fmt(Math.abs(vic))}　女友應還：${fmt(gf)}`;
-  }
 }
 
 function updateInstallPreview(){
@@ -1653,7 +1537,7 @@ function submitAdd(){
     method:document.getElementById('f-method').value,
     main:document.getElementById('f-main').value,
     sub:document.getElementById('f-sub').value,
-    amount, note:document.getElementById('f-note').value.trim(), split:addSplit,
+    amount, note:document.getElementById('f-note').value.trim(),
   };
   const main=document.getElementById('f-main').value;
   if(main==='貸款'){
@@ -1685,12 +1569,6 @@ function resetAddForm(){
   document.getElementById('f-loan-extra').style.display='none';
   document.getElementById('f-loan-p').value='';
   document.getElementById('f-loan-i').value='';
-  addSplit=null;
-  document.querySelectorAll('#panel-add .split-opt').forEach(b=>b.classList.remove('active'));
-  document.querySelector('#panel-add .split-opt[data-v="null"]').classList.add('active');
-  document.getElementById('f-custom-wrap').style.display='none';
-  document.getElementById('f-custom-pct').value='';
-  document.getElementById('share-preview').classList.remove('show');
   updateInstallPreview();
 }
 
@@ -1702,9 +1580,6 @@ function initSearchListeners(){
     fillSelect(document.getElementById('filter-sub'), filterSubOptions(document.getElementById('filter-main').value), '全部子類別');
     renderRecords(); updateClearBtn();
   });
-  document.getElementById('filter-split-pills').querySelectorAll('.split-pill').forEach(btn=>{
-    btn.addEventListener('click',()=>{ btn.classList.toggle('active'); renderRecords(); updateClearBtn(); });
-  });
   document.getElementById('filter-toggle').addEventListener('click',()=>{
     const fc=document.getElementById('filter-card'), btn=document.getElementById('filter-toggle');
     fc.classList.toggle('open'); btn.classList.toggle('active');
@@ -1712,17 +1587,17 @@ function initSearchListeners(){
   });
 }
 function updateClearBtn(){
-  const active=isGfFiltering()||
-    document.getElementById('search-input').value.trim()||
-    ['filter-type','filter-method','filter-main','filter-sub'].some(id=>document.getElementById(id).value)||
-    document.getElementById('filter-from').value||document.getElementById('filter-to').value||
-    document.getElementById('filter-split-pills').querySelector('.split-pill.active');
+  const active=hasActiveRecordFilters();
   document.getElementById('filter-clear').style.display=active?'':'none';
+}
+function hasActiveRecordFilters(){
+  return document.getElementById('search-input').value.trim()||
+    ['filter-type','filter-method','filter-main','filter-sub'].some(id=>document.getElementById(id).value)||
+    document.getElementById('filter-from').value||document.getElementById('filter-to').value;
 }
 function clearFilters(){
   document.getElementById('search-input').value='';
   ['filter-type','filter-method','filter-main','filter-sub','filter-from','filter-to'].forEach(id=>{ document.getElementById(id).value=''; });
-  document.getElementById('filter-split-pills').querySelectorAll('.split-pill.active').forEach(b=>b.classList.remove('active'));
   updateClearBtn(); renderRecords();
 }
 
@@ -1734,8 +1609,6 @@ function applyFilters(data){
   const fsub=document.getElementById('filter-sub').value;
   const ffrom=document.getElementById('filter-from').value;
   const fto=document.getElementById('filter-to').value;
-  const activeSplits=[...document.getElementById('filter-split-pills').querySelectorAll('.split-pill.active')].map(b=>b.dataset.val);
-  const splitMap={vic:r=>r.split===null,half:r=>typeof r.split==='number'&&r.split>0&&r.split<=1,gf:r=>r.split===0,repay:r=>r.split==='repay'};
   return data.filter(r=>{
     if(q&&!`${r.main}${r.sub}${r.note}${r.method}${r.type}${r.amount}`.toLowerCase().includes(q)) return false;
     if(ft&&r.type!==ft) return false;
@@ -1744,22 +1617,18 @@ function applyFilters(data){
     if(fsub&&r.sub!==fsub) return false;
     if(ffrom&&r.date<ffrom) return false;
     if(fto&&r.date>fto) return false;
-    if(activeSplits.length&&!activeSplits.some(v=>splitMap[v](r))) return false;
     return true;
   });
 }
 
 function amtStr(v){return fmt(Math.abs(v));}
-function isGfFiltering(){
-  return !![...document.getElementById('filter-split-pills').querySelectorAll('.split-pill.active')]
-    .some(b=>['half','gf','repay'].includes(b.dataset.val));
-}
 function renderRecords(){
   const filtered=applyFilters(loadRecords()).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
   const list=document.getElementById('records-list');
   const sumEl=document.getElementById('records-summary');
   const catEl=document.getElementById('records-cat-stats');
-  if(filtered.length){
+  const showStats=!!hasActiveRecordFilters();
+  if(showStats&&filtered.length){
     const total=filtered.reduce((s,r)=>s+r.amount,0);
     const exp=filtered.filter(r=>r.amount<0).reduce((s,r)=>s+r.amount,0);
     const inc=filtered.filter(r=>r.amount>0).reduce((s,r)=>s+r.amount,0);
@@ -1767,43 +1636,34 @@ function renderRecords(){
     const parts=[`共 ${filtered.length} 筆`,`淨現流 ${netText}`];
     if(inc) parts.push(`流入 ${fmt(inc)}`);
     if(exp) parts.push(`流出 ${fmt(Math.abs(exp))}`);
-    const activeSplits=[...document.getElementById('filter-split-pills').querySelectorAll('.split-pill.active')].map(b=>b.dataset.val);
-    if(activeSplits.some(v=>['half','gf'].includes(v))){
-      const myTotal=filtered.reduce((s,r)=>s+Math.abs(vicShare(r.amount,r.split)),0);
-      const gfTotal=filtered.reduce((s,r)=>s+gfOwes(r.amount,r.split),0);
-      parts.push(`Vic ${fmt(myTotal)}`,`女友 ${fmt(gfTotal)}`);
-    }
     sumEl.innerHTML=parts.map(p=>`<span>${p}</span>`).join('');
     sumEl.style.display='flex';
     // category stats
     const mainMap={};
     filtered.forEach(r=>{
       const m=r.main||r.type||'其他', s=r.sub||'';
-      if(!mainMap[m]) mainMap[m]={vic:0,gf:0,subs:{}};
-      const v=vicShare(r.amount,r.split), g=r.amount-v;
-      mainMap[m].vic+=v; mainMap[m].gf+=g;
+      if(!mainMap[m]) mainMap[m]={total:0,subs:{}};
+      mainMap[m].total+=r.amount;
       if(s){
-        if(!mainMap[m].subs[s]) mainMap[m].subs[s]={vic:0,gf:0};
-        mainMap[m].subs[s].vic+=v; mainMap[m].subs[s].gf+=g;
+        if(!mainMap[m].subs[s]) mainMap[m].subs[s]={total:0};
+        mainMap[m].subs[s].total+=r.amount;
       }
     });
     const rows=Object.entries(mainMap).map(([m,d])=>{
       const subRows=Object.entries(d.subs).map(([s,sd])=>`
         <div class="cst-row cst-sub-row">
           <span>${s}</span>
-          <span class="cst-amt cst-vic">${amtStr(sd.vic)}</span>
-          <span class="cst-amt cst-gf">${amtStr(sd.gf)}</span>
+          <span class="cst-amt cst-vic">${amtStr(sd.total)}</span>
         </div>`).join('');
       return `<div class="cst-row cst-main-row">
         <span>${m}</span>
-        <span class="cst-amt cst-vic">${amtStr(d.vic)}</span>
-        <span class="cst-amt cst-gf">${amtStr(d.gf)}</span>
+        <span class="cst-amt cst-vic">${amtStr(d.total)}</span>
       </div>${subRows}`;
     }).join('');
-    if(isGfFiltering()){
+    if(filtered.length){
       catEl.innerHTML=`<div class="cat-stats-wrap">
         <div class="cat-stats-title">類別統計</div>
-        <div class="cst-row cst-head"><span>類別</span><span class="cst-amt">Vic</span><span class="cst-amt">女友</span></div>
+        <div class="cst-row cst-head"><span>類別</span><span class="cst-amt">金額</span></div>
         ${rows}</div>`;
       catEl.style.display='block';
     } else { catEl.style.display='none'; }
@@ -1830,14 +1690,8 @@ function txItemHTML(r){
   const ic=catIcon(r.main||r.type), bg=catBg(r.main||r.type);
   const amtCls=r.amount<0?'clr-expense':r.amount>0?'clr-income':'clr-transfer';
   const amtStr=fmt(Math.abs(r.amount));
-  const vc=vicShare(r.amount,r.split);
-  const vicStr=r.split!==null&&r.split!=='repay'?`Vic: ${vc>0?'+':''}${fmt(Math.abs(vc))}`:'';
-  const splitBadge=r.split===0?'<span class="badge badge-gf">全女友</span>'
-    :r.split===1?'<span class="badge badge-half">各半</span>'
-    :(typeof r.split==='number'&&r.split>0&&r.split<1)?`<span class="badge" style="background:#F5F3FF;color:#7C3AED">女${Math.round((1-r.split)*100)}%</span>`
-    :r.split==='repay'?'<span class="badge badge-repay">女友還款</span>':'';
   const installBadge=r.installments>1?`<span class="badge badge-install">分${r.installments}期</span>`:'';
-  const badge=splitBadge+installBadge;
+  const badge=installBadge;
   const mainLine=[r.method&&r.method!=='無'?r.method:null,r.main||r.type,r.sub].filter(Boolean).join(' · ');
   return `<div class="tx-swipe-wrap">
     <div class="tx-copy-btn" onclick="copyRecord('${r.id}')">複製</div>
@@ -1850,7 +1704,6 @@ function txItemHTML(r){
       </div>
       <div class="tx-right">
         <div class="tx-amount-val ${amtCls}">${amtStr}</div>
-        ${vicStr?`<div class="tx-vic-share">${vicStr}</div>`:''}
       </div>
     </div>
   </div>`;
@@ -2013,34 +1866,7 @@ function openEdit(id){
   loanExtra.style.display=r.main==='貸款'?'block':'none';
   document.getElementById('e-loan-p').value=r.loanPrincipal?fmtInput(r.loanPrincipal):'';
   document.getElementById('e-loan-i').value=r.loanInterest?fmtInput(r.loanInterest):'';
-  editSplit=r.split;
-  const isCustomSplit=typeof r.split==='number'&&r.split>0&&r.split<1;
-  const sv=r.split===null?'null':r.split==='repay'?'repay':isCustomSplit?'custom':String(r.split);
-  document.querySelectorAll('#edit-overlay .split-opt').forEach(b=>b.classList.toggle('active',b.dataset.v===sv));
-  const eWrap=document.getElementById('e-custom-wrap');
-  if(isCustomSplit){
-    eWrap.style.display='flex';
-    document.getElementById('e-custom-pct').value=Math.round((1-r.split)*100);
-  } else { eWrap.style.display='none'; }
   document.getElementById('edit-overlay').classList.add('open');
-}
-
-function editSelectSplit(btn){
-  document.querySelectorAll('#edit-overlay .split-opt').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  const eWrap=document.getElementById('e-custom-wrap');
-  if(btn.dataset.v==='custom'){
-    eWrap.style.display='flex';
-    const pct=parseFloat(document.getElementById('e-custom-pct').value);
-    editSplit=(!isNaN(pct)&&pct>=0&&pct<=100)?(1-pct/100):null;
-  } else {
-    eWrap.style.display='none';
-    editSplit=btn.dataset.v==='null'?null:btn.dataset.v==='repay'?'repay':Number(btn.dataset.v);
-  }
-}
-function editCustomPctChanged(){
-  const pct=parseFloat(document.getElementById('e-custom-pct').value);
-  if(!isNaN(pct)&&pct>=0&&pct<=100) editSplit=1-pct/100;
 }
 
 function closeModal(){ document.getElementById('edit-overlay').classList.remove('open'); currentEditId=null; }
@@ -2057,8 +1883,9 @@ function saveEdit(){
     method:document.getElementById('e-method').value,
     main, sub:document.getElementById('e-sub').value,
     amount:parseAmt(document.getElementById('e-amount').value)||data[idx].amount,
-    note:document.getElementById('e-note').value.trim(), split:editSplit,
+    note:document.getElementById('e-note').value.trim(),
   };
+  delete updated.split;
   if(isCCMethod(updated.method)&&document.getElementById('e-install-toggle').classList.contains('active')){
     const n=parseInt(document.getElementById('e-install-count').value);
     if(n>=2){
@@ -2518,10 +2345,8 @@ function renderStats(){
   const inc=md.filter(r=>r.amount>0&&r.type==='收入');
   const totalExp=exp.reduce((s,r)=>s+r.amount,0);
   const totalInc=inc.reduce((s,r)=>s+r.amount,0);
-  const vicExp=exp.reduce((s,r)=>s+vicShare(r.amount,r.split),0);
   document.getElementById('s-expense').textContent=fmt(Math.abs(totalExp));
   document.getElementById('s-income').textContent=fmt(totalInc);
-  document.getElementById('s-vic-expense').textContent=fmt(Math.abs(vicExp));
   // 可用金額（標記可用的帳戶合計，含被轉入金額）
   const bd=loadAcctBal(); const mg2=loadMG(); const avail2=loadAcctAvail();
   const bankEwAccts=[...(mg2['銀行帳戶']||[]),...(mg2['電子錢包']||[])];
@@ -2565,7 +2390,6 @@ function renderStats(){
   renderBankSection(data, prefix);
   renderCCSection(data, prefix);
   renderFinPlanSection(data, prefix);
-  renderGFSummary(data, prefix);
   renderLoanTable(data, prefix);
   renderFixedChart(md);
   renderFloatPieChart(md);
@@ -2729,19 +2553,6 @@ function renderBankSection(data, prefix){
   }).join('');
   const total=`<tr class="total-row"><td>銀行區合計</td><td>${tCashNet?nc(tCashNet):'-'}</td><td>${nc(tOther)}</td><td>${fmt(tBal)}</td><td>${tAvail?`<span class="clr-income">${fmt(tAvail)}</span>`:'-'}</td></tr>`;
   document.getElementById('bank-table-body').innerHTML=rows+total;
-}
-
-function renderGFSummary(data, prefix){
-  const hasGfShare=r=>typeof r.split==='number'&&gfOwes(r.amount,r.split)>0;
-  const mo=data.filter(r=>r.date.startsWith(prefix)&&hasGfShare(r)&&r.amount<0).reduce((s,r)=>s+gfOwes(r.amount,r.split),0);
-  const mr=data.filter(r=>r.date.startsWith(prefix)&&r.split==='repay').reduce((s,r)=>s+gfRepaid(r.amount,r.split),0);
-  const ao=data.filter(r=>hasGfShare(r)&&r.amount<0).reduce((s,r)=>s+gfOwes(r.amount,r.split),0);
-  const ar=data.filter(r=>r.split==='repay').reduce((s,r)=>s+gfRepaid(r.amount,r.split),0);
-  document.getElementById('gf-rows').innerHTML=`
-    <div class="gf-row"><span class="gf-key">本月應還</span><span class="gf-val">$${fmt(mo)}</span></div>
-    <div class="gf-row"><span class="gf-key">本月已還</span><span class="gf-val" style="color:#16A34A">-$${fmt(mr)}</span></div>
-    <div class="gf-row"><span class="gf-key">累計已還（全部）</span><span class="gf-val" style="color:#16A34A">-$${fmt(ar)}</span></div>
-    <div class="gf-row"><span class="gf-key">累計淨欠（全部）</span><span class="gf-val">$${fmt(ao-ar)}</span></div>`;
 }
 
 function renderLoanTable(data, prefix){
@@ -3454,7 +3265,7 @@ function exportJSON(){
   const payload={records:loadRecords(),methods_grouped:loadMG(),categories:loadCats(),income_cats:loadIncome(),fixed:loadFixed(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets()};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=`vic2_backup_${new Date().toISOString().slice(0,10)}.json`;
+  const a=document.createElement('a'); a.href=url; a.download=`friends_backup_${new Date().toISOString().slice(0,10)}.json`;
   a.click(); URL.revokeObjectURL(url); showToast('📤 已下載備份');
 }
 function importJSON(){ document.getElementById('json-file-input').click(); }
@@ -3492,6 +3303,11 @@ function handleJSONImport(e){
 function confirmClear(){
   if(!confirm('確定清除所有記帳資料？此操作無法復原！')) return;
   localStorage.removeItem(KEY_RECORDS); renderRecords(); updateHeaderSub(); showToast('🗑 已清除');
+}
+async function confirmClearAllDataAndSettings(){
+  if(!confirm('確定清空全部資料與設定？\n所有設定區塊會變成空白，且會同步到目前帳號。')) return;
+  await clearAllDataAndSettings();
+  showToast('🧹 已清空全部資料與設定');
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -3548,7 +3364,6 @@ function initBackToTopBtns(){
     el.appendChild(btn);
   };
   document.querySelectorAll('#panel-stats .chart-title').forEach(addBtn);
-  addBtn(document.querySelector('#panel-stats .gf-title'));
   document.querySelectorAll('#panel-settings .settings-section-title').forEach(addBtn);
 }
 function scrollToSection(id){
@@ -3567,280 +3382,23 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='2.31';
+const APP_VERSION='friends-1.2';
 const CHANGELOG=[
-  {version:'2.31',date:'2026-05-26',items:[
-    '信用卡正數退刷會扣減未繳金額，並於信用卡消費圖表下方補充統計說明',
-    '記錄列表支援電腦右鍵複製與刪除，刪除前需確認',
-    '編輯記帳時支援電腦按 Enter 快速儲存',
+  {version:'friends-1.2',date:'2026-05-26',items:[
+    '記錄頁類別統計改為只在搜尋或篩選時顯示',
+    '登入頁新增忘記密碼重設流程，並支援新註冊帳號自動清空資料',
+    '設定頁新增清空全部資料與設定，空白帳號不再載入預設清單',
   ]},
-  {version:'2.30',date:'2026-05-26',items:[
-    'Header 摘要改為統一顯示今年支出、收入與筆數',
+  {version:'friends-1.1',date:'2026-05-26',items:[
+    '朋友版改為獨立同步資料與本機儲存，不再與 Vic 記帳本共用帳號狀態或雲端文件',
   ]},
-  {version:'2.29',date:'2026-05-25',items:[
-    '記錄篩選各一半改為包含自訂比例，並更新標籤文字',
-  ]},
-  {version:'2.28',date:'2026-05-25',items:[
-    '記錄篩選各一半或全女友時，摘要新增 Vic 與女友分攤金額',
-  ]},
-  {version:'2.27',date:'2026-05-22',items:[
-    '新增信用卡分期時顯示每期攤還金額預覽',
-  ]},
-  {version:'2.26',date:'2026-05-22',items:[
-    '內部轉帳新增財務規劃帳戶選項，可用於緊急預備金提領到銀行帳戶',
-    '財務規劃帳戶作為內部轉帳主類別時，金額不再自動帶入負號',
-  ]},
-  {version:'2.25',date:'2026-05-22',items:[
-    '新增頁支援按手機鍵盤完成鍵直接新增記帳',
-  ]},
-  {version:'2.24',date:'2026-05-22',items:[
-    '進一步降低統計與報表頁日期切換列高度',
-    '調整記錄與統計頁頂部灰色留白，與報表頁距離一致',
-    '縮小報表頁切換按鈕與月份列之間的灰色間距',
-  ]},
-  {version:'2.23',date:'2026-05-22',items:[
-    '降低統計與報表頁日期切換列高度，讓畫面更精簡',
-  ]},
-  {version:'2.22',date:'2026-05-22',items:[
-    '新增信用卡分期時自動設為已入帳，後續月份依期數自動累計已付期數',
-    '統計、設定與記錄頁上方控制區改為捲動時固定顯示，並補上遮罩避免內容穿透',
-  ]},
-  {version:'2.21',date:'2026-05-21',items:[
-    '記錄摘要改為顯示淨現流、流入與流出，淨流出時保留負號',
-  ]},
-  {version:'2.20',date:'2026-05-21',items:[
-    '修正跨日後 Header 日期未與新增表單日期同步更新的問題',
-  ]},
-  {version:'2.19',date:'2026-05-20',items:[
-    '修正貸款還本金與利息含千分位逗號時儲存數值被截斷的問題',
-    '貸款欄位文字調整為還本金必填與利息自動算',
-    '銀行區合併本月提款與本月存錢為提款/存錢淨額欄位',
-    '新增與編輯日期加入完整 4 位數年份檢查',
-    '電腦操作新增頁時支援按 Enter 快速新增記帳',
-  ]},
-  {version:'2.18',date:'2026-05-20',items:[
-    'Header 日期下方新增同步按鈕，可從任一頁快速手動同步',
-  ]},
-  {version:'2.17',date:'2026-05-20',items:[
-    '記錄篩選新增子類別條件，並依主類別連動選項',
-    '報表貸款改為依設定中的貸款名稱逐列顯示與編輯預估',
-    '新增貸款時改為選完貸款子類別後，才自動帶入該貸款當月預估金額',
-  ]},
-  {version:'2.16',date:'2026-05-20',items:[
-    '修正固定支出設定新增、刪除與排序後，新增記帳子類別未同步更新的問題',
-  ]},
-  {version:'2.15',date:'2026-05-20',items:[
-    '修正季&月報表橫向滑動時，預估欄位錯誤固定到最左側的問題',
-  ]},
-  {version:'2.14',date:'2026-05-18',items:[
-    '修正報表最底下內容被底部導覽列遮住的問題',
-    '電子錢包進出金額正數改為綠色顯示，並移除加號',
-  ]},
-  {version:'2.13',date:'2026-05-18',items:[
-    '移除報表頁橫向捲軸下方多餘留白',
-  ]},
-  {version:'2.12',date:'2026-05-18',items:[
-    '修正手機版報表資料列被群組列背景覆蓋的問題',
-    '報表頁改為單一垂直捲動，移除右側雙重捲軸',
-  ]},
-  {version:'2.11',date:'2026-05-18',items:[
-    '修正報表資料消失的問題（移除內層 overflow div，改由容器直接處理捲動）',
-    '表頭列（項目／預估／實際等）垂直凍結正式生效',
-  ]},
-  {version:'2.10',date:'2026-05-18',items:[
-    '報表表頭列（項目／預估／實際等）正式凍結，捲動時固定於頂部',
-    '修正 iOS Safari 上 sticky 表頭失效的問題（border-collapse 調整）',
-  ]},
-  {version:'2.9',date:'2026-05-18',items:[
-    '報表版面改用 flex 布局，徹底修正資料不顯示的問題',
-    '報表導覽列凍結於上方，表格區域獨立捲動',
-    '表頭列固定於表格頂部，左右滑動正常同步',
-  ]},
-  {version:'2.8',date:'2026-05-18',items:[
-    '修正報表資料消失的問題',
-    '報表表頭凍結改用更穩定的方式實作',
-  ]},
-  {version:'2.7',date:'2026-05-18',items:[
-    '報表上方導覽列（年份、切換、月份）凍結，往下滑不移動',
-    '報表表頭（項目/預估/實際...）凍結，左右滑與內容同步',
-    '報表收入/成本/費用大項左右滑時固定在左側不消失',
-    '報表收入合計、成本合計、費用合計新增收入佔比及各項佔比',
-    '報表淨利列文字簡化',
-    '各一半分攤圖示改為兩個女生 👭',
-  ]},
-  {version:'2.6',date:'2026-05-18',items:[
-    '篩選全部類別新增「繳信用卡款」',
-    '記錄跨年度時顯示年份大標題',
-    '固定支出新增時自動帶入報表月預算（無預算則帶入設定金額）',
-    '銀行統計其他進出欄位新增轉帳轉入金額',
-    '統計本月收入表格新增進帳日欄位',
-  ]},
-  {version:'2.5',date:'2026-05-17',items:[
-    '女友分攤新增自訂比例，可指定女友負擔百分比',
-    '自訂比例再次點擊可收回輸入框',
-    '自訂比例正確計入統計女友應還款項',
-    '記錄頂部收入移除正號',
-    '分攤按鈕改為兩行排版（3＋2）',
-  ]},
-  {version:'2.4',date:'2026-05-17',items:[
-    '記錄列表頂部合計移除正號',
-    '月/年可用餘額移除負號（顏色區分正負）',
-    '電子錢包合計列新增餘額加總',
-    '女友圖示改為兩個女生 👭',
-    '可用金額、可用現金移除錢字號與負號',
-  ]},
-  {version:'2.3',date:'2026-05-17',items:[
-    '統計本月收入卡片移除正號',
-  ]},
-  {version:'2.2',date:'2026-05-17',items:[
-    '內部轉帳新增「電子錢包操作（加值）」主類別',
-    '費用類型移除「加值」選項，電子錢包加值改歸內部轉帳',
-    '加值記帳：統計中來源銀行帳戶自動扣除對應金額，電子錢包帳戶自動增加',
-    '修正：新增記錄後付款方式仍為信用卡時，分期選項持續顯示',
-    '修正：點擊女友分攤按鈕不再收起鍵盤',
-  ]},
-  {version:'2.1',date:'2026-05-14',items:[
-    '分期按鈕點擊時不再收起鍵盤',
-    '記錄列表正數金額移除加號，保留綠色顯示',
-    '新增金額輸入框縮小，分期選項移至金額欄右側同行',
-    '金額輸入框寬度對齊主類別欄位',
-  ]},
-  {version:'2.0',date:'2026-05-13',items:[
-    'v2 正式版：合併分期功能分支',
-    '信用卡分期記帳：新增期數，統計區顯示分期明細與入帳控制',
-    '月/年可用餘額：全新計算邏輯（收入−浮動−固定−貸款），點擊顯示各項明細',
-    '固定支出統計：無記錄時顯示報表當月預算值',
-    '財務語言新增「月可用餘額」公式說明',
-    '修正：新增表單預設信用卡時正確顯示分期選項',
-  ]},
-  {version:'1.23',date:'2026-05-12',items:[
-    '移除統計本月收入卡片中的結餘顯示',
-  ]},
-  {version:'1.22',date:'2026-05-12',items:[
-    '修正清除篩選按鈕在 iOS 上未顯示的問題',
-  ]},
-  {version:'1.21',date:'2026-05-12',items:[
-    '篩選有條件時顯示「✕ 清除」按鈕，一鍵清空所有篩選',
-    '修正統計固定支出表格支出日字體大小不一致',
-  ]},
-  {version:'1.20',date:'2026-05-12',items:[
-    '記錄篩選分帳改為多選 pill 按鈕，可同時選多種分帳方式',
-    '篩選結果上方顯示總金額、筆數統計',
-    '篩選女友相關時，顯示各類別的 Vic / 女友金額明細',
-    '「GF還款」全面更名為「女友還款」',
-  ]},
-  {version:'1.19',date:'2026-05-11',items:[
-    '固定支出大類可刪除，刪除後該大類的項目自動移入第一個大類',
-    '新增大類時插入在最後面，且不影響已設定好的項目分類',
-  ]},
-  {version:'1.18',date:'2026-05-11',items:[
-    '固定支出新增分類群組功能：可自訂群組、為每筆項目指派群組',
-    '統計圖表改為顯示群組合計，更清晰好讀',
-    '修正固定支出群組下拉選單過窄、文字被截斷的問題',
-  ]},
-  {version:'1.17',date:'2026-05-09',items:[
-    '新增介面主題色功能：設定頁可選擇藍、青藍、綠、紫、玫瑰、橙共 6 種顏色',
-    '選擇的顏色會記憶，下次開啟自動套用',
-  ]},
-  {version:'1.16',date:'2026-05-07',items:[
-    '修正浮動支出子類別拖移後自動收起的問題，展開狀態現在會保持',
-  ]},
-  {version:'1.15',date:'2026-05-07',items:[
-    '浮動支出設定：點類別名稱可改名，改名後所有記錄與每月預算自動同步更新',
-    '浮動支出設定：長按主類別或子類別可拖移調整順序',
-  ]},
-  {version:'1.14',date:'2026-05-05',items:[
-    '記錄列表新增複製功能：左滑顯示複製（藍）與刪除（紅）按鈕，複製後日期設為今天',
-    '統計頁順序調整：銀行區移至固定支出下方，信用卡區移至銀行區後面',
-  ]},
-  {version:'1.13',date:'2026-05-05',items:[
-    '自動登出時間調整為 7 天未使用，減少不必要的重新登入',
-  ]},
-  {version:'1.12',date:'2026-05-04',items:[
-    '新增記帳時依分類自動過濾主類別：收入只顯示收入類別、清償負債只顯示貸款及繳信用卡款、內部轉帳只顯示銀行帳戶操作',
-    '內部轉帳的付款方式隱藏信用卡帳戶',
-    '主類別順序調整：繳信用卡款移至貸款前',
-    '30 天未使用 App 才自動登出，日常使用保持登入狀態',
-  ]},
-  {version:'1.11',date:'2026-05-04',items:[
-    '修正浮動支出順序每次同步後跑掉的問題（Firestore 不保留 key 順序，改用獨立陣列記錄）',
-    '切換分頁時保留各分頁的捲軸位置，不再跳回頂部',
-  ]},
-  {version:'1.10',date:'2026-05-04',items:[
-    '登入畫面標題跟著表頭名字同步更新',
-  ]},
-  {version:'1.9',date:'2026-05-04',items:[
-    '報表：雲端同步後若報表頁正在顯示，自動更新順序',
-    '設定財務規劃：輸入金額時鍵盤不再消失（修正重新渲染問題）',
-    '設定財務規劃：金額欄改為小數鍵盤，行為與其他金額欄位一致',
-  ]},
-  {version:'1.8',date:'2026-05-04',items:[
-    '登入後記憶 Email，下次需重新登入時自動填入',
-    '設定頁拖曳排序完成後立即同步雲端，避免順序被舊資料覆蓋',
-    '設定頁拖曳時頁面自動捲動跟隨手指',
-    '浮動支出統計與報表現在同時計算正數與負數金額（正數視為退款）',
-  ]},
-  {version:'1.7',date:'2026-05-03',items:[
-    '付款方式下拉選單順序調整為：現金、信用卡、銀行帳戶、電子錢包、無',
-  ]},
-  {version:'1.6',date:'2026-05-03',items:[
-    '記錄列表左滑才顯示刪除按鈕，避免誤觸',
-    '修正左滑刪除後點擊刪除按鈕會開啟編輯畫面的問題',
-    '修正設定頁長按拖曳排序時出現藍色文字選取框的問題',
-  ]},
-  {version:'1.5',date:'2026-05-03',items:[
-    '新增帳號登入功能（Email + 密碼），資料自動雲端同步',
-    '每次新增、編輯、刪除記錄後 2 秒內自動上傳至雲端',
-    '開啟 App 或從背景回來時自動下載最新資料',
-    'Header 小圓點顯示同步狀態（🟡同步中 / 🟢已同步 / 🔴錯誤）',
-    '設定頁帳號區塊移至最下方，可手動同步及登出',
-    '修正 iOS 主畫面 PWA 模式不跳出更新提醒的問題',
-  ]},
-  {version:'1.4',date:'2026-05-03',items:[
-    '統計固定支出不再顯示預設數值，僅顯示當月實際記錄',
-    '財務規劃統計支援付款方式為「無」、主類別為帳戶名的收入記錄',
-    '設定各清單支援長按拖曳排序，順序同步至選單、統計及報表',
-    '記錄列表支援左滑刪除',
-    '付款方式新增「無」選項，選擇時記錄不顯示付款方式欄位',
-    '記錄列表顯示備註（小灰字）',
-  ]},
-  {version:'1.3',date:'2026-05-03',items:[
-    '記錄列表顯示備註（小灰字）',
-    '付款方式新增「無」選項，適用於利息收入等不需付款方式的記錄',
-    '報表頁輸入預估數時鍵盤不再消失（iOS 修正）',
-  ]},
-  {version:'1.2',date:'2026-05-03',items:[
-    '付款方式順序調整為：現金、銀行帳戶、信用卡、電子錢包',
-    '輸入金額時數字鍵盤不再自動收起（iOS 修正）',
-  ]},
-  {version:'1.1',date:'2026-05-02',items:[
-    '付款方式分組「銀行存款」更名為「銀行帳戶」，舊資料自動遷移',
-    '選銀行帳戶付款時，主類別新增提款、轉帳、現金存入、手續費、奉獻',
-    '選電子錢包付款時，主類別新增加值',
-    '主類別新增「繳信用卡款」，子類別自動列出信用卡清單',
-    '轉帳、加值、財務規劃帳戶的子類別自動帶出帳戶/卡片選項',
-    '主類別及子類別依 Excel 清單全面更新（新增保養美容細項、交通費擴充等）',
-    '清償負債、內部轉帳、投資選擇後，金額欄自動填入負號',
-    '信用卡繳款可用「繳信用卡款」主類別記帳，統計自動扣除尚待繳清金額',
-    '固定支出統計自動抓取歷史記錄的付款方式',
-    '銀行區：提款增加可用現金、現金存入減少可用現金',
-    '銀行區：轉帳記帳後，目標帳戶餘額自動更新',
-    '銀行區：本月提款/存錢欄位依主類別判斷，其他進出為非現金相關',
-    '記錄列表改為「付款方式 · 主類別 · 子類別」粗黑字顯示',
-    '設定頁新增/刪除帳戶或類別後，新增頁選單即時連動更新',
-  ]},
-  {version:'1.0',date:'2026-05-02',items:[
-    '統計頁新增固定支出明細表（方式、金額、支出日自動抓取）',
-    '報表頁預估數改為每月可獨立輸入，不再共用同一份預算',
-    '新增「帶入上月預估」按鈕，一鍵複製上月預算',
-    '固定支出、貸款、成本也納入每月可編輯預估',
-    '設定頁新增「📚 財務語言」詞典，可自行新增與編輯',
-    '設定頁「資料備份」改名為「🛠️ 維護與工具」',
+  {version:'friends-1.0',date:'2026-05-26',items:[
+    '朋友版：移除分攤相關介面與統計，保留原本記帳、統計、報表、信用卡與設定功能',
   ]},
 ];
 
 function checkChangelog(){
-  const seen=localStorage.getItem('vic2_seen_version');
+  const seen=localStorage.getItem('friends_seen_version');
   if(seen===APP_VERSION) return;
   const entry=CHANGELOG.find(c=>c.version===APP_VERSION);
   if(!entry) return;
@@ -3854,7 +3412,7 @@ function checkChangelog(){
 }
 
 function dismissChangelog(){
-  localStorage.setItem('vic2_seen_version',APP_VERSION);
+  localStorage.setItem('friends_seen_version',APP_VERSION);
   document.getElementById('changelog-overlay').classList.remove('open');
 }
 
@@ -3879,7 +3437,7 @@ const DEFAULT_GLOSSARY=[
   {id:'gl10',term:'收入佔比',def:'公式：各細項實際金額 ÷ 收入合計 × 100%\n\n顯示於年度/月份報表中，衡量每一筆收入或支出佔總收入的比重。\n\n用途：快速判斷某項支出相對於收入的負擔程度，例如房租佔收入 30% 代表每賺 100 元就有 30 元用於房租。'},
   {id:'gl11',term:'各項佔比',def:'公式：細項金額 ÷ 所屬大項合計 × 100%\n\n顯示於年度/月份報表中，衡量每一細項在自身類別內的佔比。\n\n• 收入細項 ÷ 收入合計\n• 成本細項 ÷ 成本合計\n• 費用細項 ÷ 費用合計\n\n用途：了解某類支出內部的結構組成，例如在所有費用中哪個項目佔最大比重。'},
 ];
-const KEY_GLOSSARY='vic2_glossary';
+const KEY_GLOSSARY='friends_glossary';
 function loadGlossary(){ return load(KEY_GLOSSARY,DEFAULT_GLOSSARY); }
 function saveGlossary(a){ save(KEY_GLOSSARY,a); }
 
@@ -3971,14 +3529,44 @@ function showAddGlossary(){
 
 // ─── Firebase 同步 ────────────────────────────────────────────────────────────
 const _fbCfg={apiKey:"AIzaSyB1b6oTHXkYj1TfZJvwKqfD0Lcim49Bhjk",authDomain:"expense-c7e01.firebaseapp.com",projectId:"expense-c7e01",storageBucket:"expense-c7e01.firebasestorage.app",messagingSenderId:"435599371028",appId:"1:435599371028:web:76d55af7b63de277d03001"};
-firebase.initializeApp(_fbCfg);
-const _auth=firebase.auth();
-const _db=firebase.firestore();
+const _fbApp=firebase.initializeApp(_fbCfg,FRIENDS_FIREBASE_APP);
+const _auth=firebase.auth(_fbApp);
+const _db=firebase.firestore(_fbApp);
 _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
-let _fbUser=null, _isSyncing=false, _syncTimer=null, _authMode='login';
+let _fbUser=null, _isSyncing=false, _syncTimer=null, _authMode='login', _pendingNewAccountReset=false;
 
 function setSyncDot(s){ const d=document.getElementById('sync-dot'); d.className=s; }
+
+function clearAppDataForNewAccount(){
+  clearTimeout(_syncTimer); _syncTimer=null;
+  localStorage.setItem(KEY_BLANK_ACCOUNT,'1');
+  [
+    [KEY_RECORDS,[]],
+    [KEY_MG,{}],
+    [KEY_CATS,{}],
+    [KEY_INCOME,[]],
+    [KEY_FIXED,[]],
+    [KEY_FIXED_GROUPS,[]],
+    [KEY_LOANS,[]],
+    [KEY_LOAN_PRIN,{}],
+    [KEY_ACCT_BAL,{}],
+    [KEY_ACCT_AVAIL,{}],
+    [KEY_CC_DUE,{}],
+    [KEY_CC_LIMITS,[]],
+    [KEY_FIN_PLAN,[]],
+    [KEY_BUDGETS,{}],
+    [KEY_MONTHLY_BUDGETS,{}],
+    [KEY_GLOSSARY,[]],
+  ].forEach(([k,v])=>localStorage.setItem(k,JSON.stringify(v)));
+  renderRecords(); renderStats(); renderAllSettingsEditors(); updateHeaderSub();
+  populateAddForm(); populateEditForm(); populateFilterDropdowns();
+  if(document.getElementById('panel-report')?.classList.contains('active')) renderFinReport();
+}
+async function clearAllDataAndSettings(){
+  clearAppDataForNewAccount();
+  if(_fbUser) await syncToCloud();
+}
 
 function scheduleSyncToCloud(){
   if(!_fbUser) return;
@@ -3991,8 +3579,8 @@ async function syncToCloud(){
   if(!_fbUser) return;
   try{
     const _cats=loadCats();
-    const p={records:loadRecords(),methods_grouped:loadMG(),categories:_cats,cats_order:Object.keys(_cats),income_cats:loadIncome(),fixed:loadFixed(),fixed_groups:loadFixedGroups(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets()};
-    await _db.collection('users').doc(_fbUser.uid).collection('data').doc('main').set(p);
+    const p={blank_account:isBlankAccount(),records:loadRecords(),methods_grouped:loadMG(),categories:_cats,cats_order:Object.keys(_cats),income_cats:loadIncome(),fixed:loadFixed(),fixed_groups:loadFixedGroups(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets()};
+    await _db.collection('users').doc(_fbUser.uid).collection('data').doc(FRIENDS_CLOUD_DOC).set(p);
     setSyncDot('ok');
   } catch(e){ setSyncDot('error'); }
 }
@@ -4001,10 +3589,12 @@ async function syncFromCloud(){
   if(!_fbUser) return;
   setSyncDot('syncing');
   try{
-    const doc=await _db.collection('users').doc(_fbUser.uid).collection('data').doc('main').get();
+    const doc=await _db.collection('users').doc(_fbUser.uid).collection('data').doc(FRIENDS_CLOUD_DOC).get();
     if(doc.exists){
       _isSyncing=true;
       const d=doc.data();
+      if(d.blank_account) localStorage.setItem(KEY_BLANK_ACCOUNT,'1');
+      else localStorage.removeItem(KEY_BLANK_ACCOUNT);
       if(Array.isArray(d.records)) saveRecords(d.records);
       if(d.methods_grouped) saveMG(d.methods_grouped);
       if(d.categories){
@@ -4041,25 +3631,46 @@ async function manualSync(){
 }
 
 // Auth UI
+function renderAuthMode(){
+  const isLogin=_authMode==='login';
+  const isRegister=_authMode==='register';
+  document.getElementById('login-mode-sub').textContent=isLogin?'登入以同步資料':isRegister?'建立新帳號':'輸入 Email 取得重設連結';
+  document.getElementById('login-submit-btn').textContent=isLogin?'登入':isRegister?'註冊':'寄出重設信';
+  document.getElementById('login-switch-text').textContent=isRegister?'已有帳號？':_authMode==='reset'?'想起密碼？':'還沒有帳號？';
+  document.querySelector('.login-switch b').textContent=isRegister||_authMode==='reset'?'登入':'註冊';
+  document.getElementById('login-password').style.display=_authMode==='reset'?'none':'block';
+  document.getElementById('login-forgot-wrap').style.display=isLogin?'block':'none';
+  setLoginMessage('');
+}
 function toggleAuthMode(){
   _authMode=_authMode==='login'?'register':'login';
-  document.getElementById('login-mode-sub').textContent=_authMode==='login'?'登入以同步資料':'建立新帳號';
-  document.getElementById('login-submit-btn').textContent=_authMode==='login'?'登入':'註冊';
-  document.getElementById('login-switch-text').textContent=_authMode==='login'?'還沒有帳號？':'已有帳號？';
-  document.getElementById('login-error').textContent='';
+  renderAuthMode();
+}
+function showPasswordReset(){
+  _authMode='reset';
+  renderAuthMode();
+}
+function setLoginMessage(text,type='error'){
+  const errEl=document.getElementById('login-error');
+  errEl.textContent=text;
+  errEl.style.color=type==='success'?'#10B981':'#EF4444';
 }
 
 async function doAuthSubmit(){
   const email=document.getElementById('login-email').value.trim();
   const pw=document.getElementById('login-password').value;
-  const errEl=document.getElementById('login-error');
   const btn=document.getElementById('login-submit-btn');
-  if(!email||!pw){ errEl.textContent='請填寫 Email 和密碼'; return; }
-  btn.disabled=true; errEl.textContent='';
+  if(_authMode==='reset'){ await sendPasswordReset(); return; }
+  if(!email||!pw){ setLoginMessage('請填寫 Email 和密碼'); return; }
+  btn.disabled=true; setLoginMessage('');
   try{
     if(_authMode==='login') await _auth.signInWithEmailAndPassword(email,pw);
-    else await _auth.createUserWithEmailAndPassword(email,pw);
+    else{
+      _pendingNewAccountReset=true;
+      await _auth.createUserWithEmailAndPassword(email,pw);
+    }
   } catch(e){
+    _pendingNewAccountReset=false;
     const msg={
       'auth/user-not-found':'找不到此帳號',
       'auth/wrong-password':'密碼錯誤',
@@ -4068,18 +3679,39 @@ async function doAuthSubmit(){
       'auth/weak-password':'密碼至少需要 6 個字元',
       'auth/invalid-credential':'帳號或密碼錯誤',
     };
-    errEl.textContent=msg[e.code]||'登入失敗，請再試一次';
+    setLoginMessage(msg[e.code]||'登入失敗，請再試一次');
+    btn.disabled=false;
+  }
+}
+async function sendPasswordReset(){
+  const email=document.getElementById('login-email').value.trim();
+  const btn=document.getElementById('login-submit-btn');
+  if(!email){ setLoginMessage('請先輸入 Email'); return; }
+  btn.disabled=true; setLoginMessage('');
+  try{
+    await _auth.sendPasswordResetEmail(email);
+    setLoginMessage('已寄出密碼重設信，請到信箱查看；如果沒收到，請檢查垃圾郵件。','success');
+  }catch(e){
+    const msg={
+      'auth/user-not-found':'找不到此帳號',
+      'auth/invalid-email':'Email 格式不正確',
+    };
+    setLoginMessage(msg[e.code]||'無法寄出重設信，請再試一次');
+  } finally {
     btn.disabled=false;
   }
 }
 
 async function doLogout(){
   if(!confirm('確定要登出？')) return;
+  localStorage.removeItem('friends_last_email');
+  document.getElementById('login-email').value='';
+  document.getElementById('login-password').value='';
   await _auth.signOut();
 }
 
 // Auth state listener
-const KEY_LAST_ACTIVE='vic2_last_active';
+const KEY_LAST_ACTIVE='friends_last_active';
 const SEVEN_DAYS=7*24*60*60*1000;
 _auth.onAuthStateChanged(async user=>{
   _fbUser=user;
@@ -4089,11 +3721,18 @@ _auth.onAuthStateChanged(async user=>{
       await _auth.signOut(); return;
     }
     localStorage.setItem(KEY_LAST_ACTIVE, Date.now().toString());
-    localStorage.setItem('vic2_last_email', user.email);
+    localStorage.setItem('friends_last_email', user.email);
     document.getElementById('acct-email').textContent=user.email;
     const overlay=document.getElementById('login-overlay');
     overlay.style.opacity='0'; setTimeout(()=>overlay.style.display='none',300);
-    await syncFromCloud();
+    if(_pendingNewAccountReset){
+      clearAppDataForNewAccount();
+      await syncToCloud();
+      _pendingNewAccountReset=false;
+      showToast('✅ 已建立新帳號，資料已清空');
+    } else {
+      await syncFromCloud();
+    }
   } else {
     localStorage.removeItem(KEY_LAST_ACTIVE);
     const overlay=document.getElementById('login-overlay');
@@ -4101,7 +3740,7 @@ _auth.onAuthStateChanged(async user=>{
     document.getElementById('login-submit-btn').disabled=false;
     setSyncDot('');
     // 自動填入上次登入的 email
-    const lastEmail=localStorage.getItem('vic2_last_email');
+    const lastEmail=localStorage.getItem('friends_last_email');
     if(lastEmail) document.getElementById('login-email').value=lastEmail;
   }
 });

@@ -1,6 +1,6 @@
 {
-  "name": "Vic 記帳本 v2",
-  "short_name": "記帳 v2",
+  "name": "記帳本 Friends",
+  "short_name": "記帳本",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#F0F2F5",
