@@ -1048,7 +1048,7 @@ function saveRecords(a){ save(KEY_RECORDS, a); }
 function isBlankAccount(){ return localStorage.getItem(KEY_BLANK_ACCOUNT)==='1'; }
 function blankDefault(v){ return isBlankAccount()?clone(v):null; }
 
-function loadMG(){ return load(KEY_MG, blankDefault({})||DEFAULT_METHODS_GROUPED); }
+function loadMG(){ return load(KEY_MG, blankDefault({'現金':['現金']})||DEFAULT_METHODS_GROUPED); }
 function saveMG(o){ save(KEY_MG, o); }
 function loadMethods(){ return Object.values(loadMG()).flat(); }
 
@@ -3382,8 +3382,11 @@ let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.2';
+const APP_VERSION='friends-1.3';
 const CHANGELOG=[
+  {version:'friends-1.3',date:'2026-05-27',items:[
+    '新註冊帳號清空設定時，現金區預設保留現金付款方式',
+  ]},
   {version:'friends-1.2',date:'2026-05-26',items:[
     '記錄頁類別統計改為只在搜尋或篩選時顯示',
     '登入頁新增忘記密碼重設流程，並支援新註冊帳號自動清空資料',
@@ -3543,7 +3546,7 @@ function clearAppDataForNewAccount(){
   localStorage.setItem(KEY_BLANK_ACCOUNT,'1');
   [
     [KEY_RECORDS,[]],
-    [KEY_MG,{}],
+    [KEY_MG,{'現金':['現金']}],
     [KEY_CATS,{}],
     [KEY_INCOME,[]],
     [KEY_FIXED,[]],
