@@ -1366,17 +1366,35 @@ function populateFilterDropdowns(){
   const cats=loadCats(); const income=loadIncome(); const methods=loadMethods();
   const mainEl=document.getElementById('filter-main');
   const subEl=document.getElementById('filter-sub');
-  const curMain=mainEl.value;
-  const curSub=subEl.value;
+  const state=getFilterState();
   fillSelect(document.getElementById('filter-type'), DEFAULT_TYPES, '全部分類');
   fillSelect(document.getElementById('filter-method'), methods, '全部方式');
   // build flat main list for filter
   const plans=loadFinPlan();
   const allMain=[...Object.keys(cats),'固定支出','繳信用卡款','貸款',...plans.map(p=>p.name),...income];
   fillSelect(mainEl, allMain, '全部類別');
-  if([...mainEl.options].some(op=>op.value===curMain)) mainEl.value=curMain;
+  restoreSelectValue(mainEl,state.main);
   fillSelect(subEl, filterSubOptions(mainEl.value), '全部子類別');
-  if([...subEl.options].some(op=>op.value===curSub)) subEl.value=curSub;
+  restoreSelectValue(subEl,state.sub);
+  restoreSelectValue(document.getElementById('filter-type'),state.type);
+  restoreSelectValue(document.getElementById('filter-method'),state.method);
+  document.getElementById('filter-from').value=state.from;
+  document.getElementById('filter-to').value=state.to;
+  updateClearBtn();
+}
+function getFilterState(){
+  return {
+    type:document.getElementById('filter-type')?.value||'',
+    method:document.getElementById('filter-method')?.value||'',
+    main:document.getElementById('filter-main')?.value||'',
+    sub:document.getElementById('filter-sub')?.value||'',
+    from:document.getElementById('filter-from')?.value||'',
+    to:document.getElementById('filter-to')?.value||'',
+  };
+}
+function restoreSelectValue(el,value){
+  if(!el||!value) return;
+  if([...el.options].some(op=>op.value===value)) el.value=value;
 }
 
 // ─── Tab ───────────────────────────────────────────────────────────────────
@@ -3527,8 +3545,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.8';
+const APP_VERSION='friends-1.9';
 const CHANGELOG=[
+  {version:'friends-1.9',date:'2026-05-27',items:[
+    '記錄頁篩選條件在切換頁面後會持續保留並繼續套用',
+  ]},
   {version:'friends-1.8',date:'2026-05-27',items:[
     '記帳本名稱納入雲端同步，手機與電腦登入畫面及表頭會同步更新',
   ]},
