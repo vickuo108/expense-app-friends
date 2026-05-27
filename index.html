@@ -1207,15 +1207,24 @@ function initHeader(){
   loadAppTitle();
 }
 const KEY_APP_NAME='friends_app_name';
+function applyAppTitle(v){
+  const title=v||'記帳本 💰';
+  const header=document.getElementById('app-title');
+  if(header) header.textContent=title;
+  document.querySelectorAll('.login-title').forEach(el=>{ el.textContent=title; });
+  document.title=title.replace(/\s*💰\s*$/,'');
+  const appleTitle=document.querySelector('meta[name="apple-mobile-web-app-title"]');
+  if(appleTitle) appleTitle.setAttribute('content',document.title);
+}
 function saveAppTitle(){
   const el=document.getElementById('app-title');
   const v=el.textContent.trim();
-  if(v){ localStorage.setItem(KEY_APP_NAME,v); document.querySelector('.login-title').textContent=v; }
-  else el.textContent=localStorage.getItem(KEY_APP_NAME)||'記帳本 💰';
+  if(v){ localStorage.setItem(KEY_APP_NAME,v); applyAppTitle(v); syncAppTitleNow(); }
+  else applyAppTitle(localStorage.getItem(KEY_APP_NAME));
 }
 function loadAppTitle(){
   const v=localStorage.getItem(KEY_APP_NAME);
-  if(v){ document.getElementById('app-title').textContent=v; document.querySelector('.login-title').textContent=v; }
+  applyAppTitle(v);
 }
 
 function updateHeaderSub(){
@@ -3373,7 +3382,7 @@ async function editLoanName(id){
 
 // ─── Backup / restore ──────────────────────────────────────────────────────
 function exportJSON(){
-  const payload={records:loadRecords(),methods_grouped:loadMG(),categories:loadCats(),income_cats:loadIncome(),fixed:loadFixed(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets()};
+  const payload={records:loadRecords(),methods_grouped:loadMG(),categories:loadCats(),income_cats:loadIncome(),fixed:loadFixed(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets(),app_name:localStorage.getItem(KEY_APP_NAME)||''};
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=`friends_backup_${new Date().toISOString().slice(0,10)}.json`;
@@ -3404,6 +3413,7 @@ function handleJSONImport(e){
         if(Array.isArray(d.cc_limits)) saveCCLimits(d.cc_limits);
         if(Array.isArray(d.fin_plan)) saveFinPlan(d.fin_plan);
         if(d.monthly_budgets&&typeof d.monthly_budgets==='object') saveMonthlyBudgets(d.monthly_budgets);
+        if(typeof d.app_name==='string'&&d.app_name.trim()){ localStorage.setItem(KEY_APP_NAME,d.app_name.trim()); loadAppTitle(); }
         showToast('✅ 備份已還原');
       }
       renderRecords(); updateHeaderSub(); renderAllSettingsEditors();
@@ -3517,8 +3527,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.7';
+const APP_VERSION='friends-1.8';
 const CHANGELOG=[
+  {version:'friends-1.8',date:'2026-05-27',items:[
+    '記帳本名稱納入雲端同步，手機與電腦登入畫面及表頭會同步更新',
+  ]},
   {version:'friends-1.7',date:'2026-05-27',items:[
     '設定頁各區項目支援點擊名稱重新命名，並同步更新既有記錄與相關設定',
   ]},
@@ -3725,11 +3738,18 @@ function scheduleSyncToCloud(){
   _syncTimer=setTimeout(syncToCloud,2000);
 }
 
+function syncAppTitleNow(){
+  if(!_fbUser) return;
+  clearTimeout(_syncTimer);
+  setSyncDot('syncing');
+  syncToCloud();
+}
+
 async function syncToCloud(){
   if(!_fbUser) return;
   try{
     const _cats=loadCats();
-    const p={blank_account:isBlankAccount(),records:loadRecords(),methods_grouped:loadMG(),categories:_cats,cats_order:Object.keys(_cats),income_cats:loadIncome(),fixed:loadFixed(),fixed_groups:loadFixedGroups(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets()};
+    const p={blank_account:isBlankAccount(),records:loadRecords(),methods_grouped:loadMG(),categories:_cats,cats_order:Object.keys(_cats),income_cats:loadIncome(),fixed:loadFixed(),fixed_groups:loadFixedGroups(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets(),app_name:localStorage.getItem(KEY_APP_NAME)||''};
     await _db.collection('users').doc(_fbUser.uid).collection('data').doc(FRIENDS_CLOUD_DOC).set(p);
     setSyncDot('ok');
   } catch(e){ setSyncDot('error'); }
@@ -3766,6 +3786,7 @@ async function syncFromCloud(){
       if(Array.isArray(d.cc_limits)) saveCCLimits(d.cc_limits);
       if(Array.isArray(d.fin_plan)) saveFinPlan(d.fin_plan);
       if(d.monthly_budgets) saveMonthlyBudgets(d.monthly_budgets);
+      if(typeof d.app_name==='string'&&d.app_name.trim()){ localStorage.setItem(KEY_APP_NAME,d.app_name.trim()); loadAppTitle(); }
       _isSyncing=false;
       renderRecords(); renderStats(); renderAllSettingsEditors(); updateHeaderSub();
       populateAddForm(); populateEditForm(); populateFilterDropdowns();
