@@ -2803,7 +2803,7 @@ function renderCCEditor(containerId, list){
   const bal=loadAcctBal();
   const rows=list.map(item=>`
     <div class="list-item-row" data-dkey="${item}">
-      <span class="list-item-name">${item}</span>
+      <span class="list-item-name" style="cursor:pointer" onclick="editMethodItem('信用卡','${esc(item)}')">${item}</span>
       <span class="inline-num-label">期初 $</span>
       <input type="number" class="inline-num" value="${bal[item]||''}" placeholder="0"
         onblur="saveAcctBalItem('${esc(item)}',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
@@ -2825,7 +2825,7 @@ function renderBankEditor(containerId, list, groupKey){
     const isAvail=avail[item]||false;
     const btnStyle=isAvail?'background:#DCFCE7;border-color:#16A34A;color:#15803D':'background:#F3F4F6;border-color:#D1D5DB;color:#9BA3AF';
     return `<div class="list-item-row" data-dkey="${item}">
-      <span class="list-item-name">${item}</span>
+      <span class="list-item-name" style="cursor:pointer" onclick="editMethodItem('${groupKey}','${esc(item)}')">${item}</span>
       <span class="inline-num-label">期初 $</span>
       <input type="number" class="inline-num" value="${bal[item]||''}" placeholder="0"
         onblur="saveAcctBalItem('${esc(item)}',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
@@ -2848,7 +2848,7 @@ function renderCCLimitsEditor(){
   const header=`<div class="fin-plan-total"><span>信用卡總額度</span><span>$${fmt(total)}</span></div>`;
   const rows=limits.map(l=>`
     <div class="list-item-row" data-dkey="${l.id}">
-      <span class="list-item-name">${l.name}</span>
+      <span class="list-item-name" style="cursor:pointer" onclick="editCCLimitName('${l.id}')">${l.name}</span>
       <span class="inline-num-label">$</span>
       <input type="number" class="inline-num" value="${l.amount||''}" placeholder="0" min="0" step="1"
         onblur="saveCCLimitAmt('${l.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
@@ -2873,6 +2873,13 @@ function delCCLimit(id){
   if(!confirm('確定刪除？')) return;
   saveCCLimits(loadCCLimits().filter(l=>l.id!==id)); renderCCLimitsEditor(); showToast('已刪除');
 }
+async function editCCLimitName(id){
+  const limits=loadCCLimits(); const item=limits.find(l=>l.id===id); if(!item) return;
+  const newName=(await appPrompt(`重新命名「${item.name}」：`,item.name)||'').trim();
+  if(!newName||newName===item.name) return;
+  if(limits.some(l=>l.name===newName)){showToast('已存在相同名稱');return;}
+  item.name=newName; saveCCLimits(limits); renderCCLimitsEditor(); showToast('✅ 已更名');
+}
 
 function renderBalanceListEditor(containerId, list, groupKey, amtLabel){
   const el=document.getElementById(containerId);
@@ -2895,6 +2902,13 @@ function saveAcctBalItem(name,val){
   const bal=loadAcctBal(); const n=parseFloat(val)||0;
   if(n) bal[name]=n; else delete bal[name];
   saveAcctBal(bal);
+}
+function renameObjectKey(obj, saver, oldKey, newKey){
+  if(obj[oldKey]===undefined) return false;
+  obj[newKey]=obj[oldKey];
+  delete obj[oldKey];
+  saver(obj);
+  return true;
 }
 function refreshFormDropdowns(){
   const fMethodEl=document.getElementById('f-method');
@@ -2925,6 +2939,32 @@ function balListDel(cid,name,groupKey){
   const bal=loadAcctBal(); delete bal[name]; saveAcctBal(bal);
   renderAllSettingsEditors(); refreshFormDropdowns(); showToast('已刪除');
 }
+async function editMethodItem(groupKey, oldName){
+  const newName=(await appPrompt(`重新命名「${oldName}」：`,oldName)||'').trim();
+  if(!newName||newName===oldName) return;
+  const mg=loadMG(); const list=mg[groupKey]||[];
+  if(list.includes(newName)){showToast('已存在相同名稱');return;}
+  const idx=list.indexOf(oldName); if(idx<0) return;
+  list[idx]=newName; mg[groupKey]=list; saveMG(mg);
+  renameObjectKey(loadAcctBal(), saveAcctBal, oldName, newName);
+  renameObjectKey(loadAcctAvail(), saveAcctAvail, oldName, newName);
+  renameObjectKey(loadCCDue(), saveCCDue, oldName, newName);
+  const limits=loadCCLimits(); let lc=false;
+  limits.forEach(l=>{ if(l.name===oldName){l.name=newName;lc=true;} });
+  if(lc) saveCCLimits(limits);
+  const records=loadRecords(); let rc=false;
+  records.forEach(r=>{
+    if(r.method===oldName){r.method=newName;rc=true;}
+    if(r.sub===oldName&&isMethodTargetSub(r,groupKey)){r.sub=newName;rc=true;}
+  });
+  if(rc) saveRecords(records);
+  renderAllSettingsEditors(); refreshFormDropdowns(); updateHeaderSub(); showToast('✅ 已更名');
+}
+function isMethodTargetSub(r, groupKey){
+  if(groupKey==='信用卡') return r.main==='繳信用卡款'||r.main==='加值';
+  if(groupKey==='銀行帳戶'||groupKey==='電子錢包') return r.main==='轉帳'||r.main==='加值'||isFinPlanName(r.main);
+  return false;
+}
 
 function renderFinPlanEditor(){
   const plans=loadFinPlan();
@@ -2933,7 +2973,7 @@ function renderFinPlanEditor(){
   const header=`<div class="fin-plan-total"><span>帳戶總額</span><span>$${fmt(total)}</span></div>`;
   const rows=plans.map(p=>`
     <div class="list-item-row" data-dkey="${p.id}">
-      <span class="list-item-name">${p.name}</span>
+      <span class="list-item-name" style="cursor:pointer" onclick="editFinPlanName('${p.id}')">${p.name}</span>
       <span class="inline-num-label">$</span>
       <input type="text" inputmode="decimal" class="inline-num" value="${p.amount||''}" placeholder="0"
         onblur="saveFinPlanAmt('${p.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
@@ -2961,12 +3001,24 @@ function delFinPlan(id){
   if(!confirm('確定刪除？')) return;
   saveFinPlan(loadFinPlan().filter(p=>p.id!==id)); renderFinPlanEditor(); showToast('已刪除');
 }
+async function editFinPlanName(id){
+  const plans=loadFinPlan(); const item=plans.find(p=>p.id===id); if(!item) return;
+  const oldName=item.name;
+  const newName=(await appPrompt(`重新命名「${oldName}」：`,oldName)||'').trim();
+  if(!newName||newName===oldName) return;
+  if(plans.some(p=>p.name===newName)){showToast('已存在相同名稱');return;}
+  item.name=newName; saveFinPlan(plans);
+  const records=loadRecords(); let rc=false;
+  records.forEach(r=>{ if(r.main===oldName){r.main=newName;rc=true;} });
+  if(rc) saveRecords(records);
+  renderFinPlanEditor(); refreshFormDropdowns(); showToast('✅ 已更名');
+}
 
 function renderSimpleListEditor(containerId, list, placeholder, onSave){
   const el=document.getElementById(containerId);
   const rows=list.map((item,i)=>`
     <div class="list-item-row" data-dkey="${item}">
-      <span class="list-item-name">${item}</span>
+      <span class="list-item-name" style="cursor:pointer" onclick="simpleListEdit('${containerId}',${i})">${item}</span>
       <button class="list-item-del" onclick="simpleListDel('${containerId}',${i})">×</button>
     </div>`).join('');
   el.innerHTML=rows+`<div class="list-add-row">
@@ -2992,6 +3044,20 @@ function simpleListDel(cid, idx){
   const el=document.getElementById(cid);
   const list=[...el._list]; list.splice(idx,1); el._onSave(list);
   renderAllSettingsEditors(); showToast('已刪除');
+}
+async function simpleListEdit(cid, idx){
+  const el=document.getElementById(cid);
+  const list=[...el._list]; const oldName=list[idx]; if(!oldName) return;
+  const newName=(await appPrompt(`重新命名「${oldName}」：`,oldName)||'').trim();
+  if(!newName||newName===oldName) return;
+  if(list.includes(newName)){showToast('已存在相同名稱');return;}
+  list[idx]=newName; el._onSave(list);
+  if(cid==='editor-income'){
+    const records=loadRecords(); let rc=false;
+    records.forEach(r=>{ if(r.type==='收入'&&r.main===oldName){r.main=newName;rc=true;} });
+    if(rc) saveRecords(records);
+  }
+  renderAllSettingsEditors(); refreshFormDropdowns(); showToast('✅ 已更名');
 }
 
 function renderFloatCatsEditor(){
@@ -3086,7 +3152,7 @@ function renderFixedEditor(){
   const grpOpts=groups.map(g=>`<option value="${g}">${g}</option>`).join('');
   const rows=fixed.map(f=>`
     <div class="list-item-row" data-dkey="${f.id}">
-      <span class="list-item-name">${f.name}</span>
+      <span class="list-item-name" style="cursor:pointer" onclick="editFixedName('${f.id}')">${f.name}</span>
       <select style="font-size:11px;border:1px solid #E5E7EB;border-radius:5px;padding:2px 2px;color:#6B7280;background:#fff;max-width:110px;min-width:80px" onchange="saveFixedGroup('${f.id}',this.value)">
         ${groups.map(g=>`<option value="${g}"${(f.group||fallback)===g?' selected':''}>${g}</option>`).join('')}
       </select>
@@ -3166,6 +3232,24 @@ function delFixed(id){
   if(!confirm('確定刪除？')) return;
   saveFixed(loadFixed().filter(f=>f.id!==id)); renderFixedEditor(); refreshFormDropdowns(); showToast('已刪除');
 }
+async function editFixedName(id){
+  const fixed=loadFixed(); const item=fixed.find(f=>f.id===id); if(!item) return;
+  const oldName=item.name;
+  const newName=(await appPrompt(`重新命名「${oldName}」：`,oldName)||'').trim();
+  if(!newName||newName===oldName) return;
+  if(fixed.some(f=>f.name===newName)){showToast('已存在相同名稱');return;}
+  item.name=newName; saveFixed(fixed);
+  const records=loadRecords(); let rc=false;
+  records.forEach(r=>{ if(r.main==='固定支出'&&r.sub===oldName){r.sub=newName;rc=true;} });
+  if(rc) saveRecords(records);
+  const budgets=loadMonthlyBudgets();
+  Object.values(budgets).forEach(mo=>{
+    const oldKey='fixed:'+oldName, newKey='fixed:'+newName;
+    if(mo[oldKey]!==undefined){mo[newKey]=mo[oldKey];delete mo[oldKey];}
+  });
+  saveMonthlyBudgets(budgets);
+  renderFixedEditor(); refreshFormDropdowns(); showToast('✅ 已更名');
+}
 
 // ── 長按拖曳排序 ─────────────────────────────────────────────────────────────
 let _ds=null;
@@ -3241,7 +3325,7 @@ function renderLoansEditor(){
   const el=document.getElementById('editor-loans');
   const rows=loans.map(l=>`
     <div class="list-item-row" data-dkey="${l.id}">
-      <span class="list-item-name">${l.name}</span>
+      <span class="list-item-name" style="cursor:pointer" onclick="editLoanName('${l.id}')">${l.name}</span>
       <span class="inline-num-label">期初本金 $</span>
       <input type="number" class="inline-num" value="${l.principal||''}" placeholder="0" min="0" step="1"
         onblur="saveLoanPrincipal('${l.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
@@ -3267,6 +3351,24 @@ function addLoan(){
 function delLoan(id){
   if(!confirm('確定刪除此貸款？')) return;
   saveLoans(loadLoans().filter(l=>l.id!==id)); renderLoansEditor(); showToast('已刪除');
+}
+async function editLoanName(id){
+  const loans=loadLoans(); const item=loans.find(l=>l.id===id); if(!item) return;
+  const oldName=item.name;
+  const newName=(await appPrompt(`重新命名「${oldName}」：`,oldName)||'').trim();
+  if(!newName||newName===oldName) return;
+  if(loans.some(l=>l.name===newName)){showToast('已存在相同名稱');return;}
+  item.name=newName; saveLoans(loans);
+  const records=loadRecords(); let rc=false;
+  records.forEach(r=>{ if(r.main==='貸款'&&r.sub===oldName){r.sub=newName;rc=true;} });
+  if(rc) saveRecords(records);
+  const budgets=loadMonthlyBudgets();
+  Object.values(budgets).forEach(mo=>{
+    const oldKey='loan:'+oldName, newKey='loan:'+newName;
+    if(mo[oldKey]!==undefined){mo[newKey]=mo[oldKey];delete mo[oldKey];}
+  });
+  saveMonthlyBudgets(budgets);
+  renderLoansEditor(); refreshFormDropdowns(); showToast('✅ 已更名');
 }
 
 // ─── Backup / restore ──────────────────────────────────────────────────────
@@ -3415,8 +3517,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.6';
+const APP_VERSION='friends-1.7';
 const CHANGELOG=[
+  {version:'friends-1.7',date:'2026-05-27',items:[
+    '設定頁各區項目支援點擊名稱重新命名，並同步更新既有記錄與相關設定',
+  ]},
   {version:'friends-1.6',date:'2026-05-27',items:[
     '重新命名輸入框改為 App 內彈窗，送出按鈕顯示確認',
   ]},
