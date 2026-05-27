@@ -223,6 +223,14 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .btn{padding:12px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;width:100%}
 .btn-primary{background:var(--primary);color:#fff}
 .btn-danger{background:#FFF1F2;color:#EF4444;border:1.5px solid #FECDD3}
+.prompt-overlay{z-index:900;align-items:center;padding:20px}
+.prompt-modal{background:#fff;border-radius:18px;padding:20px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.prompt-title{font-size:18px;font-weight:700;color:#1A1A2E;margin-bottom:14px;line-height:1.4}
+.prompt-input{width:100%;box-sizing:border-box;padding:12px 14px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:16px;outline:none}
+.prompt-input:focus{border-color:var(--primary)}
+.prompt-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:16px}
+.prompt-btn{border:none;background:transparent;color:#6B7280;font-size:15px;font-weight:700;padding:8px 10px;cursor:pointer}
+.prompt-btn.primary{color:var(--primary)}
 
 /* Category icon backgrounds */
 .bg-food{background:#FFF7ED}.bg-snack{background:#FDF4FF}.bg-transport{background:#EFF6FF}
@@ -3037,8 +3045,8 @@ function addFloatMain(){ const inp=document.getElementById('fce-main-inp'), val=
 function delFloatMain(main){ if(!confirm(`刪除「${main}」？`)) return; const cats=loadCats(); delete cats[main]; saveCats(cats); renderFloatCatsEditor(); refreshFormDropdowns(); showToast('已刪除'); }
 function addFloatSub(main,i){ const inp=document.getElementById(`fce-sub-${i}`), val=inp.value.trim(); if(!val) return; const cats=loadCats(); if(!cats[main]) return; if(cats[main].includes(val)){showToast('已存在');return;} cats[main].push(val); saveCats(cats); inp.value=''; renderFloatCatsEditor(); refreshFormDropdowns(); const w=document.getElementById(`fce-wrap-${i}`); if(w){w.style.display='block'; document.getElementById(`fce-exp-${i}`).textContent='▼';} showToast('✅ 已新增'); }
 function delFloatSub(main,idx){ const cats=loadCats(); if(!cats[main]) return; cats[main].splice(idx,1); saveCats(cats); renderFloatCatsEditor(); refreshFormDropdowns(); showToast('已刪除'); }
-function editFloatMain(i,oldName){
-  const newName=(prompt(`重新命名「${oldName}」：`,oldName)||'').trim();
+async function editFloatMain(i,oldName){
+  const newName=(await appPrompt(`重新命名「${oldName}」：`,oldName)||'').trim();
   if(!newName||newName===oldName) return;
   const cats=loadCats();
   if(cats[newName]!==undefined){showToast('已存在此名稱');return;}
@@ -3052,8 +3060,8 @@ function editFloatMain(i,oldName){
   renderFloatCatsEditor(); refreshFormDropdowns(); showToast('✅ 已更名');
   scheduleSyncToCloud();
 }
-function editFloatSub(main,idx,oldSub){
-  const newSub=(prompt(`重新命名「${oldSub}」：`,oldSub)||'').trim();
+async function editFloatSub(main,idx,oldSub){
+  const newSub=(await appPrompt(`重新命名「${oldSub}」：`,oldSub)||'').trim();
   if(!newSub||newSub===oldSub) return;
   const cats=loadCats(); if(!cats[main]) return;
   if(cats[main].includes(newSub)){showToast('已存在此名稱');return;}
@@ -3116,8 +3124,8 @@ function addFixedGroup(){
   saveFixedGroups(groups); inp.value=''; renderFixedEditor(); showToast('✅ 已新增');
   scheduleSyncToCloud();
 }
-function editFixedGroup(oldName){
-  const newName=(prompt(`重新命名「${oldName}」：`,oldName)||'').trim();
+async function editFixedGroup(oldName){
+  const newName=(await appPrompt(`重新命名「${oldName}」：`,oldName)||'').trim();
   if(!newName||newName===oldName) return;
   const groups=loadFixedGroups();
   if(groups.includes(newName)){showToast('已存在此名稱');return;}
@@ -3381,10 +3389,37 @@ function setScrollTo(id){ scrollToSection(id); }
 function esc(s){ return s.replace(/'/g,"\\'"); }
 let _toast;
 function showToast(msg){ const el=document.getElementById('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(_toast); _toast=setTimeout(()=>el.classList.remove('show'),2500); }
+let _promptResolve=null;
+function appPrompt(title, value=''){
+  const overlay=document.getElementById('prompt-overlay');
+  const input=document.getElementById('prompt-input');
+  document.getElementById('prompt-title').textContent=title;
+  input.value=value;
+  overlay.classList.add('open');
+  setTimeout(()=>{ input.focus(); input.select(); },30);
+  input.onkeydown=e=>{
+    if(e.key==='Enter') resolveAppPrompt(true);
+    if(e.key==='Escape') resolveAppPrompt(false);
+  };
+  return new Promise(resolve=>{ _promptResolve=resolve; });
+}
+function resolveAppPrompt(ok){
+  if(!_promptResolve) return;
+  const overlay=document.getElementById('prompt-overlay');
+  const input=document.getElementById('prompt-input');
+  const resolve=_promptResolve;
+  _promptResolve=null;
+  overlay.classList.remove('open');
+  input.onkeydown=null;
+  resolve(ok?input.value:null);
+}
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.5';
+const APP_VERSION='friends-1.6';
 const CHANGELOG=[
+  {version:'friends-1.6',date:'2026-05-27',items:[
+    '重新命名輸入框改為 App 內彈窗，送出按鈕顯示確認',
+  ]},
   {version:'friends-1.5',date:'2026-05-27',items:[
     '設定頁現金區固定只保留現金項目，不再提供新增或刪除',
   ]},
@@ -3755,6 +3790,18 @@ _auth.onAuthStateChanged(async user=>{
   }
 });
 </script>
+
+<!-- Prompt Modal -->
+<div class="overlay prompt-overlay" id="prompt-overlay">
+  <div class="prompt-modal">
+    <div class="prompt-title" id="prompt-title"></div>
+    <input class="prompt-input" id="prompt-input" type="text">
+    <div class="prompt-actions">
+      <button class="prompt-btn" type="button" onclick="resolveAppPrompt(false)">取消</button>
+      <button class="prompt-btn primary" type="button" onclick="resolveAppPrompt(true)">確認</button>
+    </div>
+  </div>
+</div>
 
 <!-- 月可用餘額明細 sheet -->
 <div class="mobal-sheet-overlay" id="mobal-sheet-overlay" onclick="this.classList.remove('open')">
