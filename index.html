@@ -1103,6 +1103,7 @@ function loanBudgetTotal(moB){
 }
 function costBudgetKey(cat){ return `cost:${cat}`; }
 function expenseBudgetValue(v){ return v?-Math.abs(v):0; }
+function fmtBudget(n){ return n?(n<0?`<span class="clr-expense">${fmt(n)}</span>`:fmt(n)):''; }
 function saveMonthBudgetItem(ym,cat,val){
   const all=loadMonthlyBudgets();
   if(!all[ym]) all[ym]={};
@@ -2048,7 +2049,7 @@ function renderFinReport(){
   const moB=isAnnual?annualBudget:getMonthBudget(pfx);
   const getB=cat=>moB[cat]||0;
 
-  const fmtB=n=>n?(n<0?`<span class="clr-expense">${fmt(n)}</span>`:fmt(n)):'';
+  const fmtB=fmtBudget;
   const nc=n=>n===0?'':n>0?`<span class="clr-income">${fmt(n)}</span>`:`<span class="clr-expense">${fmt(n)}</span>`;
   const rate=(a,b)=>b?Math.round(Math.abs(a)/Math.abs(b)*100)+'%':'−';
   const pctCell=(a,base)=>`<td style="text-align:right;color:#9BA3AF;font-size:12px">${(a&&base)?Math.round(Math.abs(a)/Math.abs(base)*100)+'%':'−'}</td>`;
@@ -2186,7 +2187,7 @@ function renderQMReport(){
 
   const groupCells=(b,a,prevA,isTotal)=>{
     const diff=(b||a)?a-b:null;
-    return `<td>${b?fmt(Math.abs(b)):''}</td><td>${nc(a)}</td><td>${diff!==null?nc(diff):''}</td><td>${pct(a,b)}</td><td>${isTotal?'':prevA!==null?moq(a,prevA):'−'}</td>`;
+    return `<td>${fmtBudget(b)}</td><td>${nc(a)}</td><td>${diff!==null?nc(diff):''}</td><td>${pct(a,b)}</td><td>${isTotal?'':prevA!==null?moq(a,prevA):'−'}</td>`;
   };
 
   const mkRow=(label,bObj,aObj,prevAObj,cls,isTotal=false)=>{
@@ -3572,8 +3573,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.11';
+const APP_VERSION='friends-1.12';
 const CHANGELOG=[
+  {version:'friends-1.12',date:'2026-06-02',items:[
+    '修正季月報表預估欄保留成本與費用負號，避免表格因顯示函式作用域錯誤而中斷',
+  ]},
   {version:'friends-1.11',date:'2026-06-01',items:[
     '報表每月檢視移除達成率，年度檢視保留達成率',
     '修正季月報表欄位分隔線位置，避免線條穿過資料內容',
