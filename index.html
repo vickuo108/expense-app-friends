@@ -166,9 +166,8 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .qm-table thead th{background:#F8FAFC;font-weight:600;color:#374151;border-bottom:2px solid #E5E7EB}
 .qm-table thead tr:first-child th:first-child{text-align:left;position:sticky;left:0;background:#F8FAFC;z-index:5;min-width:40px;font-weight:600}
 .qm-table .qm-grp-h{text-align:center;border-left:2px solid #E5E7EB;border-right:2px solid #E5E7EB;font-size:12px}
-.qm-table td:nth-child(6),.qm-table th:nth-child(6){border-left:2px solid #E5E7EB}
-.qm-table td:nth-child(11),.qm-table th:nth-child(11){border-left:2px solid #E5E7EB}
-.qm-table td:nth-child(16),.qm-table th:nth-child(16){border-left:2px solid #E5E7EB}
+.qm-table thead tr:nth-child(2) th:nth-child(6),.qm-table thead tr:nth-child(2) th:nth-child(11),.qm-table thead tr:nth-child(2) th:nth-child(16){border-left:2px solid #E5E7EB}
+.qm-table tbody td:nth-child(7),.qm-table tbody td:nth-child(12),.qm-table tbody td:nth-child(17){border-left:2px solid #E5E7EB}
 .qm-table .qm-q td{background:#F1F5F9;font-weight:700;border-top:1.5px solid #CBD5E1}
 .qm-table .qm-q td:first-child{background:#F1F5F9}
 .qm-table .qm-total td{background:#EFF6FF;font-weight:700;border-top:2px solid #BFDBFE;color:#1D4ED8}
@@ -1102,6 +1101,8 @@ function loanBudgetTotal(moB){
   const sum=loans.reduce((s,l)=>s+(moB['loan:'+l.name]||0),0);
   return sum||moB.loan||0;
 }
+function costBudgetKey(cat){ return `cost:${cat}`; }
+function expenseBudgetValue(v){ return v?-Math.abs(v):0; }
 function saveMonthBudgetItem(ym,cat,val){
   const all=loadMonthlyBudgets();
   if(!all[ym]) all[ym]={};
@@ -2025,6 +2026,9 @@ function renderFinReport(){
   if(repView==='qm'){ renderQMReport(); return; }
   const data=loadRecords();
   const isAnnual=reportMonth===0;
+  document.querySelector('#rep-view-year thead tr').innerHTML=isAnnual
+    ? '<th>項目</th><th>預估</th><th>實際</th><th>差距</th><th>達成率</th><th>收入佔比</th><th>各項佔比</th>'
+    : '<th>項目</th><th>預估</th><th>實際</th><th>差距</th><th>收入佔比</th><th>各項佔比</th>';
   document.getElementById('rep-copy-btn-wrap').style.display=isAnnual?'none':'block';
   const pfx=isAnnual?`${reportYear}-`:`${reportYear}-${String(reportMonth).padStart(2,'0')}`;
   const rec=data.filter(r=>r.date.startsWith(pfx));
@@ -2044,7 +2048,7 @@ function renderFinReport(){
   const moB=isAnnual?annualBudget:getMonthBudget(pfx);
   const getB=cat=>moB[cat]||0;
 
-  const fmtB=n=>n?fmt(Math.abs(n)):'';
+  const fmtB=n=>n?(n<0?`<span class="clr-expense">${fmt(n)}</span>`:fmt(n)):'';
   const nc=n=>n===0?'':n>0?`<span class="clr-income">${fmt(n)}</span>`:`<span class="clr-expense">${fmt(n)}</span>`;
   const rate=(a,b)=>b?Math.round(Math.abs(a)/Math.abs(b)*100)+'%':'−';
   const pctCell=(a,base)=>`<td style="text-align:right;color:#9BA3AF;font-size:12px">${(a&&base)?Math.round(Math.abs(a)/Math.abs(base)*100)+'%':'−'}</td>`;
@@ -2059,10 +2063,11 @@ function renderFinReport(){
   };
 
   // ── 預先計算各段實際總額（供佔比使用）──
-  const costMains=[...new Set(data.filter(r=>r.type==='成本'&&r.main).map(r=>r.main))];
+  const costMains=[...new Set(rec.filter(r=>r.type==='成本'&&r.main).map(r=>r.main))];
+  const isExpenseRecord=r=>r.type!=='收入'&&r.type!=='成本';
   const incA_total=incCats.reduce((s,cat)=>s+rec.filter(r=>r.type==='收入'&&r.main===cat).reduce((ss,r)=>ss+r.amount,0),0);
   const costA_total=costMains.reduce((s,cat)=>s+rec.filter(r=>r.type==='成本'&&r.main===cat).reduce((ss,r)=>ss+r.amount,0),0);
-  const expA_total=Object.keys(cats).reduce((s,cat)=>s+rec.filter(r=>r.main===cat).reduce((ss,r)=>ss+r.amount,0),0)
+  const expA_total=Object.keys(cats).reduce((s,cat)=>s+rec.filter(r=>isExpenseRecord(r)&&r.main===cat).reduce((ss,r)=>ss+r.amount,0),0)
     +fixed.reduce((s,item)=>s+rec.filter(r=>r.main==='固定支出'&&r.sub===item.name).reduce((ss,r)=>ss+r.amount,0),0)
     +(loans.length?rec.filter(r=>r.main==='貸款').reduce((s,r)=>s+r.amount,0):0);
 
@@ -2072,14 +2077,17 @@ function renderFinReport(){
     const showPct=catTotal!==undefined;
     const incPct=showPct?pctCell(a,incA_total):'<td></td>';
     const catPct=showPct?pctCell(a,catTotal):'<td></td>';
-    return `<tr class="${cls}"><td>${label}</td>${budgetCell(b,cat)}<td>${nc(a)}</td><td>${diff!==null?nc(diff):''}</td><td>${b&&a?rate(a,b):'−'}</td>${incPct}${catPct}</tr>`;
+    const rateCell=isAnnual?`<td>${b&&a?rate(a,b):'−'}</td>`:'';
+    return `<tr class="${cls}"><td>${label}</td>${budgetCell(b,cat)}<td>${nc(a)}</td><td>${diff!==null?nc(diff):''}</td>${rateCell}${incPct}${catPct}</tr>`;
   };
+  const emptyCells='<td></td>'.repeat(isAnnual?6:5);
+  const fullColspan=isAnnual?7:6;
 
   let html='';
 
   // ── 收入 ──
   let incB=0, incA=0;
-  html+=`<tr class="rep-grp"><td>收入</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  html+=`<tr class="rep-grp"><td>收入</td>${emptyCells}</tr>`;
   incCats.forEach(cat=>{
     const b=getB(cat);
     const a=rec.filter(r=>r.type==='收入'&&r.main===cat).reduce((s,r)=>s+r.amount,0);
@@ -2090,28 +2098,28 @@ function renderFinReport(){
 
   // ── 成本 ──
   let costB=0, costA=0;
-  html+=`<tr class="rep-grp"><td>成本</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  html+=`<tr class="rep-grp"><td>成本</td>${emptyCells}</tr>`;
   costMains.forEach(cat=>{
-    const b=getB(cat);
+    const b=expenseBudgetValue(getB(costBudgetKey(cat)));
     const a=rec.filter(r=>r.type==='成本'&&r.main===cat).reduce((s,r)=>s+r.amount,0);
     costB+=b; costA+=a;
-    html+=row(cat,b,a,cat,'',costA_total);
+    html+=row(cat,b,a,costBudgetKey(cat),'',costA_total);
   });
-  if(!costMains.length) html+=`<tr><td colspan="7" style="color:#9BA3AF;font-size:11px;padding:6px 8px;background:#F8FAFC">（無記錄）</td></tr>`;
+  if(!costMains.length) html+=`<tr><td colspan="${fullColspan}" style="color:#9BA3AF;font-size:11px;padding:6px 8px;background:#F8FAFC">（無記錄）</td></tr>`;
   html+=row('成本合計',costB,costA,null,'rep-tot',costA_total);
 
   // ── 費用 ──
   let expB=0, expA=0;
-  html+=`<tr class="rep-grp"><td>費用</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  html+=`<tr class="rep-grp"><td>費用</td>${emptyCells}</tr>`;
   Object.keys(cats).forEach(cat=>{
-    const b=getB(cat);
-    const a=rec.filter(r=>r.main===cat).reduce((s,r)=>s+r.amount,0);
+    const b=expenseBudgetValue(getB(cat));
+    const a=rec.filter(r=>isExpenseRecord(r)&&r.main===cat).reduce((s,r)=>s+r.amount,0);
     expB+=b; expA+=a;
     html+=row(cat,b,a,cat,'',expA_total);
   });
   fixed.forEach(item=>{
     const key='fixed:'+item.name;
-    const b=getB(key);
+    const b=expenseBudgetValue(getB(key));
     const a=rec.filter(r=>r.main==='固定支出'&&r.sub===item.name).reduce((s,r)=>s+r.amount,0);
     expB+=b; expA+=a;
     html+=row(item.name,b,a,key,'',expA_total);
@@ -2119,7 +2127,7 @@ function renderFinReport(){
   if(loans.length){
     loans.forEach((loan,idx)=>{
       const key='loan:'+loan.name;
-      const b=moB[key]!==undefined?moB[key]:((idx===0&&moB.loan!==undefined)?moB.loan:0);
+      const b=expenseBudgetValue(moB[key]!==undefined?moB[key]:((idx===0&&moB.loan!==undefined)?moB.loan:0));
       const a=rec.filter(r=>r.main==='貸款'&&r.sub===loan.name).reduce((s,r)=>s+r.amount,0);
       expB+=b; expA+=a;
       html+=row(loan.name,b,a,key,'',expA_total);
@@ -2130,12 +2138,12 @@ function renderFinReport(){
   html+=row('費用合計',expB,expA,null,'rep-tot',expA_total);
 
   // ── 淨利 ──
-  const netB=incB+expB;
-  const netA=incA+expA;
+  const netB=incB+costB+expB;
+  const netA=incA+costA+expA;
   html+=row('淨利',netB,netA,null,'rep-net');
   const netRateB=incB?Math.round(netB/incB*100)+'%':'−';
   const netRateA=incA?Math.round(netA/incA*100)+'%':'−';
-  html+=`<tr class="rep-net"><td>淨利率</td><td>${netRateB}</td><td>${netRateA}</td><td></td><td></td><td></td><td></td></tr>`;
+  html+=`<tr class="rep-net"><td>淨利率</td><td>${netRateB}</td><td>${netRateA}</td>${'<td></td>'.repeat(isAnnual?4:3)}</tr>`;
 
   document.getElementById('report-tbody').innerHTML=html;
 }
@@ -2146,12 +2154,15 @@ function renderQMReport(){
   const floatCats=Object.keys(loadCats()); const incCats=loadIncome();
   const costMains=[...new Set(data.filter(r=>r.type==='成本'&&r.main).map(r=>r.main))];
 
+  const inReportMonth=(r,ym)=>r.date&&r.date.slice(0,7)===ym;
+  const isQmExpense=r=>r.type!=='收入'&&r.type!=='成本'&&(floatCats.includes(r.main)||r.main==='固定支出'||r.main==='貸款');
+
   // 每個月的實際數字
-  const getA=pfx=>{
-    const rec=data.filter(r=>r.date.startsWith(pfx));
+  const getA=ym=>{
+    const rec=data.filter(r=>inReportMonth(r,ym));
     const inc=rec.filter(r=>r.type==='收入').reduce((s,r)=>s+r.amount,0);
     const cost=rec.filter(r=>r.type==='成本').reduce((s,r)=>s+r.amount,0);
-    const exp=rec.filter(r=>(floatCats.includes(r.main)||r.main==='固定支出'||r.main==='貸款')&&r.amount<0).reduce((s,r)=>s+r.amount,0);
+    const exp=rec.filter(isQmExpense).reduce((s,r)=>s+r.amount,0);
     return {inc,cost,exp,net:inc+cost+exp};
   };
 
@@ -2159,10 +2170,10 @@ function renderQMReport(){
   const getMoB=ym=>{
     const moB=loadMonthBudget(ym);
     const inc=incCats.reduce((s,c)=>s+(moB[c]||0),0);
-    const cost=costMains.reduce((s,c)=>s+(moB[c]||0),0);
-    const exp=floatCats.reduce((s,c)=>s+(moB[c]||0),0)
-      +fixed.reduce((s,f)=>s+(moB['fixed:'+f.name]||0),0)
-      +loanBudgetTotal(moB);
+    const cost=costMains.reduce((s,c)=>s+expenseBudgetValue(moB[costBudgetKey(c)]||0),0);
+    const exp=floatCats.reduce((s,c)=>s+expenseBudgetValue(moB[c]||0),0)
+      +fixed.reduce((s,f)=>s+expenseBudgetValue(moB['fixed:'+f.name]||0),0)
+      +expenseBudgetValue(loanBudgetTotal(moB));
     return {inc,cost,exp,net:inc+cost+exp};
   };
 
@@ -2190,7 +2201,7 @@ function renderQMReport(){
 
   const sumB=idxs=>({
     inc:idxs.reduce((s,i)=>s+budgets[i].inc,0),
-    cost:0,
+    cost:idxs.reduce((s,i)=>s+budgets[i].cost,0),
     exp:idxs.reduce((s,i)=>s+budgets[i].exp,0),
     net:idxs.reduce((s,i)=>s+budgets[i].net,0),
   });
@@ -3561,8 +3572,15 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.10';
+const APP_VERSION='friends-1.11';
 const CHANGELOG=[
+  {version:'friends-1.11',date:'2026-06-01',items:[
+    '報表每月檢視移除達成率，年度檢視保留達成率',
+    '修正季月報表欄位分隔線位置，避免線條穿過資料內容',
+    '成本與費用改為分開計算實際與預估，同名分類不再互相影響',
+    '報表淨利與淨利率公式修正，成本與費用預估合計以負數呈現',
+    '季月報表實際費用改為與單月報表費用合計一致的淨額',
+  ]},
   {version:'friends-1.10',date:'2026-06-01',items:[
     '記錄頁跨月時新增月份分隔標題',
     '統計頁銀行、信用卡、電子錢包與財務規劃餘額改為依統計月份月底計算',
