@@ -70,6 +70,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .cst-sub-row{padding-left:12px;color:#6B7280}
 .cst-amt{text-align:right;min-width:60px;font-variant-numeric:tabular-nums}
 .cst-vic{color:#3B82F6}
+.date-month-label{font-size:14px;color:#1A1A2E;font-weight:800;padding:18px 4px 8px;margin-top:6px;border-bottom:1px solid #D1D5DB;letter-spacing:.3px}
 .date-group-label{font-size:11px;color:#9BA3AF;font-weight:600;padding:10px 4px 4px;letter-spacing:.5px}
 .date-year-label{font-size:13px;color:#6B7280;font-weight:700;padding:16px 4px 2px;letter-spacing:.5px}
 .tx-swipe-wrap{position:relative;overflow:hidden}
@@ -1243,7 +1244,7 @@ function fillSelect(el, opts, blank=''){
 }
 
 function fillMethodSelect(el, typeVal=''){
-  const mg=loadMG();
+  const mg=loadMG(); const plans=loadFinPlan();
   el.innerHTML='';
   const order=['現金','信用卡','銀行帳戶','電子錢包'];
   const sorted=[...order.filter(k=>mg[k]),...Object.keys(mg).filter(k=>!order.includes(k))];
@@ -1253,6 +1254,11 @@ function fillMethodSelect(el, typeVal=''){
     mg[grp].forEach(m=>{ const op=document.createElement('option'); op.value=m; op.textContent=m; og.appendChild(op); });
     el.appendChild(og);
   });
+  if(typeVal==='收入'&&plans.length){
+    const og=document.createElement('optgroup'); og.label='財務規劃';
+    plans.forEach(p=>{ const op=document.createElement('option'); op.value=p.name; op.textContent=p.name; og.appendChild(op); });
+    el.appendChild(og);
+  }
   const noneOp=document.createElement('option'); noneOp.value='無'; noneOp.textContent='無'; el.appendChild(noneOp);
 }
 
@@ -1710,12 +1716,12 @@ function renderRecords(){
   const groups={};
   filtered.forEach(r=>{ (groups[r.date]=groups[r.date]||[]).push(r); });
   const sortedDates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
-  const multiYear=new Set(sortedDates.map(d=>d.slice(0,4))).size>1;
-  let lastYear='';
+  const multiMonth=new Set(sortedDates.map(d=>d.slice(0,7))).size>1;
+  let lastMonth='';
   list.innerHTML=sortedDates.map(date=>{
-    const yr=date.slice(0,4);
-    const yearHeader=(multiYear&&yr!==lastYear)?(lastYear=yr,`<div class="date-year-label">${yr} 年</div>`):'';
-    return `${yearHeader}<div class="date-group-label">${formatDateLabel(date)}</div>
+    const month=date.slice(0,7);
+    const monthHeader=(multiMonth&&month!==lastMonth)?(lastMonth=month,`<div class="date-month-label">${formatMonthLabel(month)}</div>`):'';
+    return `${monthHeader}<div class="date-group-label">${formatDateLabel(date)}</div>
     <div class="card" style="padding:4px 14px">${groups[date].map(txItemHTML).join('')}</div>`;
   }).join('');
   updateClearBtn();
@@ -2484,6 +2490,7 @@ function renderCCSection(data, prefix){
   const bal=loadAcctBal(); const limits=loadCCLimits();
   const totalLimit=limits.reduce((s,l)=>s+(l.amount||0),0);
   let tCharge=0,tPay=0,tOut=0;
+  const untilMonth=r=>r.date&&r.date.slice(0,7)<=prefix;
   const isPayment=(r,name)=>
     (r.method===name&&r.type==='清償負債')||
     (r.main==='繳信用卡款'&&r.sub===name);
@@ -2492,15 +2499,15 @@ function renderCCSection(data, prefix){
     const charge=moRecs.filter(r=>r.type!=='清償負債'&&r.amount<0).reduce((s,r)=>s+r.amount,0);
     const payment=data.filter(r=>isPayment(r,name)&&r.date.startsWith(prefix)).reduce((s,r)=>s+r.amount,0);
     const openOut=bal[name]||0;
-    const allCharges=data.filter(r=>r.method===name&&r.type!=='清償負債'&&r.amount<0).reduce((s,r)=>s+Math.abs(r.amount),0);
-    const allRefunds=data.filter(r=>r.method===name&&r.type!=='清償負債'&&r.amount>0).reduce((s,r)=>s+r.amount,0);
-    const allPayments=data.filter(r=>isPayment(r,name)).reduce((s,r)=>s+Math.abs(r.amount),0);
+    const allCharges=data.filter(r=>untilMonth(r)&&r.method===name&&r.type!=='清償負債'&&r.amount<0).reduce((s,r)=>s+Math.abs(r.amount),0);
+    const allRefunds=data.filter(r=>untilMonth(r)&&r.method===name&&r.type!=='清償負債'&&r.amount>0).reduce((s,r)=>s+r.amount,0);
+    const allPayments=data.filter(r=>untilMonth(r)&&isPayment(r,name)).reduce((s,r)=>s+Math.abs(r.amount),0);
     const outstanding=openOut+allCharges-allPayments-allRefunds;
     tCharge+=charge; tPay+=payment; if(outstanding>0) tOut+=outstanding;
-    const lastPay=data.filter(r=>isPayment(r,name)).sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const lastPay=data.filter(r=>untilMonth(r)&&isPayment(r,name)).sort((a,b)=>b.date.localeCompare(a.date))[0];
     const dueStr=lastPay?lastPay.date.slice(5).replace('-','/'):'';
     // 分期記錄（所有月份，此卡，有 installments，且尚未付清）
-    const installRecs=data.filter(r=>r.method===name&&r.installments>1&&r.type!=='清償負債'
+    const installRecs=data.filter(r=>untilMonth(r)&&r.method===name&&r.installments>1&&r.type!=='清償負債'
       &&autoInstallPaid(r,prefix)<r.installments);
     const detailId=`cc-install-${ci}`;
     const hasInstall=installRecs.length>0;
@@ -2555,6 +2562,7 @@ function renderBankSection(data, prefix){
   const bal=loadAcctBal(); const avail=loadAcctAvail();
   let tCashNet=0,tOther=0,tBal=0,tAvail=0;
   const nc=n=>n===0?'-':`<span class="${n<0?'clr-expense':n>0?'clr-income':''}">${fmt(n)}</span>`;
+  const untilMonth=r=>r.date&&r.date.slice(0,7)<=prefix;
   const rows=bankAccts.map(name=>{
     const moRecs=data.filter(r=>r.method===name&&r.date.startsWith(prefix));
     // 本月提款（現金離開帳戶，主類別=提款）
@@ -2570,10 +2578,11 @@ function renderBankSection(data, prefix){
     const moIncoming=data.filter(r=>r.date.startsWith(prefix)&&r.main==='轉帳'&&r.sub===name).reduce((s,r)=>s-r.amount,0);
     const otherNet=other-moTopup+moIncoming;
     const openBal=bal[name]||0;
-    const allTx=data.filter(r=>r.method===name).reduce((s,r)=>s+r.amount,0);
+    const allTx=data.filter(r=>untilMonth(r)&&r.method===name).reduce((s,r)=>s+r.amount,0);
     // 被轉入（全部）：用於餘額計算
-    const incoming=data.filter(r=>r.main==='轉帳'&&r.sub===name).reduce((s,r)=>s-r.amount,0);
-    const balance=openBal+allTx+incoming-allTopup;
+    const incoming=data.filter(r=>untilMonth(r)&&r.main==='轉帳'&&r.sub===name).reduce((s,r)=>s-r.amount,0);
+    const topup=data.filter(r=>untilMonth(r)&&r.main==='加值'&&r.sub===name).reduce((s,r)=>s+r.amount,0);
+    const balance=openBal+allTx+incoming-topup;
     const isAvail=avail[name]||false;
     const cashNet=pull+push;
     tCashNet+=cashNet; tOther+=otherNet; tBal+=balance;
@@ -2642,10 +2651,12 @@ function renderFinPlanSection(data, prefix){
   sec.style.display='block';
   let tFlow=0, tBal=0;
   const nc=n=>n===0?'-':n>0?fmt(n):`<span class="clr-expense">-${fmt(Math.abs(n))}</span>`;
-  const planFlow=r=>(r.method&&r.method!=='無')?-r.amount:r.amount;
+  const untilMonth=r=>r.date&&r.date.slice(0,7)<=prefix;
   const rows=plans.map(p=>{
-    const moFlow=data.filter(r=>r.date.startsWith(prefix)&&r.main===p.name).reduce((s,r)=>s+planFlow(r),0);
-    const allFlow=data.filter(r=>r.main===p.name).reduce((s,r)=>s+planFlow(r),0);
+    const planRecord=r=>r.main===p.name||(r.type==='收入'&&r.method===p.name);
+    const planFlow=r=>(r.type==='收入'&&r.method===p.name)?r.amount:(r.method&&r.method!=='無')?-r.amount:r.amount;
+    const moFlow=data.filter(r=>r.date.startsWith(prefix)&&planRecord(r)).reduce((s,r)=>s+planFlow(r),0);
+    const allFlow=data.filter(r=>untilMonth(r)&&planRecord(r)).reduce((s,r)=>s+planFlow(r),0);
     const bal=(p.amount||0)+allFlow;
     tFlow+=moFlow; tBal+=bal;
     return `<tr><td>${p.name}</td><td>${moFlow?nc(moFlow):'-'}</td><td>${bal?fmt(bal):'-'}</td></tr>`;
@@ -2671,9 +2682,10 @@ function renderEWalletSection(data, prefix){
   const mg=loadMG(); const ewallets=mg['電子錢包']||[]; const bal=loadAcctBal();
   let tFlow=0, tBal=0;
   const nc=n=>n>0?`<span class="clr-income">${fmt(n)}</span>`:n<0?`<span class="clr-expense">${fmt(n)}</span>`:'';
+  const untilMonth=r=>r.date&&r.date.slice(0,7)<=prefix;
   const rows=ewallets.map(name=>{
     const flow=data.filter(r=>r.date.startsWith(prefix)&&r.method===name).reduce((s,r)=>s+r.amount,0);
-    const balance=(bal[name]||0)+data.filter(r=>r.method===name).reduce((s,r)=>s+r.amount,0);
+    const balance=(bal[name]||0)+data.filter(r=>untilMonth(r)&&r.method===name).reduce((s,r)=>s+r.amount,0);
     tFlow+=flow; tBal+=balance;
     return `<tr><td>${name}</td><td>${flow?nc(flow):''}</td><td style="text-align:right">${balance?fmt(balance):''}</td></tr>`;
   }).join('');
@@ -3493,6 +3505,10 @@ function formatDateLabel(s){
   if(s===today) return '今天'; if(s===yesterday) return '昨天';
   return d.toLocaleDateString('zh-TW',{month:'numeric',day:'numeric',weekday:'short'});
 }
+function formatMonthLabel(s){
+  const [y,m]=s.split('-');
+  return `${y} 年 ${parseInt(m,10)} 月`;
+}
 function initBackToTopBtns(){
   const goTop=()=>document.getElementById('main-content').scrollTo({top:0,behavior:'smooth'});
   const addBtn=el=>{
@@ -3545,8 +3561,13 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.9';
+const APP_VERSION='friends-1.10';
 const CHANGELOG=[
+  {version:'friends-1.10',date:'2026-06-01',items:[
+    '記錄頁跨月時新增月份分隔標題',
+    '統計頁銀行、信用卡、電子錢包與財務規劃餘額改為依統計月份月底計算',
+    '收入記錄的付款方式支援選擇財務規劃帳戶，利息收入會計入對應帳戶',
+  ]},
   {version:'friends-1.9',date:'2026-05-27',items:[
     '記錄頁篩選條件在切換頁面後會持續保留並繼續套用',
   ]},
