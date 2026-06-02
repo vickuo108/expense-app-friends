@@ -60,6 +60,9 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .filter-row:last-child{margin-bottom:0}
 .filter-select{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#fff;appearance:none;-webkit-appearance:none}
+.date-filter-pills{display:flex;gap:6px;margin-bottom:8px}
+.date-filter-pill{padding:6px 12px;border:1.5px solid #E5E7EB;border-radius:999px;background:#fff;cursor:pointer;font-size:12px;color:#6B7280;white-space:nowrap}
+.date-filter-pill:active{border-color:var(--primary);color:var(--primary);background:var(--primary-tint)}
 .records-summary{font-size:12px;color:#6B7280;padding:4px 2px 6px;display:flex;gap:12px;flex-wrap:wrap}
 .cat-stats-wrap{background:#fff;border-radius:12px;padding:10px 12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .cat-stats-title{font-size:11px;font-weight:700;color:#9BA3AF;margin-bottom:8px}
@@ -472,6 +475,10 @@ input[type=number]{-moz-appearance:textfield}
           <div class="filter-row">
             <input type="date" class="filter-select" id="filter-from" min="1000-01-01" max="9999-12-31" style="font-size:13px">
             <input type="date" class="filter-select" id="filter-to" min="1000-01-01" max="9999-12-31" style="font-size:13px">
+          </div>
+          <div class="date-filter-pills">
+            <button class="date-filter-pill" type="button" onclick="applyRecordMonthFilter('current')">本月</button>
+            <button class="date-filter-pill" type="button" onclick="applyRecordMonthFilter('prev')">上月</button>
           </div>
         </div>
         <div id="records-summary" class="records-summary" style="display:none"></div>
@@ -1595,21 +1602,23 @@ function submitAdd(){
   }
   const data=loadRecords(); data.push(rec); saveRecords(data);
   showToast('✅ 記帳成功！');
-  resetAddForm(); updateHeaderSub();
+  resetAddForm({type:rec.type,main:rec.main}); updateHeaderSub();
 }
 
-function resetAddForm(){
+function resetAddForm(lastRec=null){
   document.getElementById('f-date').value=localDateStr();
   document.getElementById('f-amount').value='';
   autoFillAmtSign();
   document.getElementById('f-note').value='';
-  document.getElementById('f-main').value='';
-  fillSelect(document.getElementById('f-sub'),[],'（選填）');
+  const mainEl=document.getElementById('f-main');
+  const keepDebtMain=lastRec?.type==='清償負債'&&lastRec.main&&[...mainEl.options].some(op=>op.value===lastRec.main);
+  mainEl.value=keepDebtMain?lastRec.main:'';
+  updateSubByMain(mainEl.value, document.getElementById('f-sub'));
   const _curMethod=document.getElementById('f-method').value;
   const _stillCC=isCCMethod(_curMethod);
   document.getElementById('f-install-extra').style.display=_stillCC?'flex':'none';
   if(!_stillCC) resetInstall('f');
-  document.getElementById('f-loan-extra').style.display='none';
+  document.getElementById('f-loan-extra').style.display=mainEl.value==='貸款'?'block':'none';
   document.getElementById('f-loan-p').value='';
   document.getElementById('f-loan-i').value='';
   updateInstallPreview();
@@ -1628,6 +1637,18 @@ function initSearchListeners(){
     fc.classList.toggle('open'); btn.classList.toggle('active');
     btn.textContent=fc.classList.contains('open')?'收起':'篩選';
   });
+}
+function dateInputStr(d){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function applyRecordMonthFilter(which){
+  const now=new Date();
+  const offset=which==='prev'?-1:0;
+  const start=new Date(now.getFullYear(),now.getMonth()+offset,1);
+  const end=new Date(now.getFullYear(),now.getMonth()+offset+1,0);
+  document.getElementById('filter-from').value=dateInputStr(start);
+  document.getElementById('filter-to').value=dateInputStr(end);
+  renderRecords(); updateClearBtn();
 }
 function updateClearBtn(){
   const active=hasActiveRecordFilters();
@@ -2516,7 +2537,7 @@ function renderCCSection(data, prefix){
     const allPayments=data.filter(r=>untilMonth(r)&&isPayment(r,name)).reduce((s,r)=>s+Math.abs(r.amount),0);
     const outstanding=openOut+allCharges-allPayments-allRefunds;
     tCharge+=charge; tPay+=payment; if(outstanding>0) tOut+=outstanding;
-    const lastPay=data.filter(r=>untilMonth(r)&&isPayment(r,name)).sort((a,b)=>b.date.localeCompare(a.date))[0];
+    const lastPay=data.filter(r=>r.date&&r.date.startsWith(prefix)&&isPayment(r,name)).sort((a,b)=>b.date.localeCompare(a.date))[0];
     const dueStr=lastPay?lastPay.date.slice(5).replace('-','/'):'';
     // 分期記錄（所有月份，此卡，有 installments，且尚未付清）
     const installRecs=data.filter(r=>untilMonth(r)&&r.method===name&&r.installments>1&&r.type!=='清償負債'
@@ -3573,8 +3594,13 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.12';
+const APP_VERSION='friends-1.13';
 const CHANGELOG=[
+  {version:'friends-1.13',date:'2026-06-02',items:[
+    '信用卡區繳款日改為每月獨立，只顯示當月實際繳款日期',
+    '記錄篩選新增本月與上月快捷按鈕，可直接套用日期範圍',
+    '新增清償負債後會保留上一筆的主類別，方便連續記錄同類負債',
+  ]},
   {version:'friends-1.12',date:'2026-06-02',items:[
     '修正季月報表預估欄保留成本與費用負號，避免表格因顯示函式作用域錯誤而中斷',
   ]},
