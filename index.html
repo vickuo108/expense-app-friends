@@ -73,7 +73,8 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .cst-sub-row{padding-left:12px;color:#6B7280}
 .cst-amt{text-align:right;min-width:60px;font-variant-numeric:tabular-nums}
 .cst-vic{color:#3B82F6}
-.date-month-label{font-size:14px;color:#1A1A2E;font-weight:800;padding:18px 4px 8px;margin-top:6px;border-bottom:1px solid #D1D5DB;letter-spacing:.3px}
+.date-month-label{font-size:14px;color:#1A1A2E;font-weight:800;padding:18px 4px 8px;margin-top:6px;border-bottom:1px solid #D1D5DB;letter-spacing:.3px;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.date-month-summary{font-size:11px;color:#6B7280;font-weight:600;letter-spacing:0;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .date-group-label{font-size:11px;color:#9BA3AF;font-weight:600;padding:10px 4px 4px;letter-spacing:.5px}
 .date-year-label{font-size:13px;color:#6B7280;font-weight:700;padding:16px 4px 2px;letter-spacing:.5px}
 .tx-swipe-wrap{position:relative;overflow:hidden}
@@ -1686,6 +1687,16 @@ function applyFilters(data){
 }
 
 function amtStr(v){return fmt(Math.abs(v));}
+function flowSummaryHTML(records){
+  const total=records.reduce((s,r)=>s+r.amount,0);
+  const exp=records.filter(r=>r.amount<0).reduce((s,r)=>s+r.amount,0);
+  const inc=records.filter(r=>r.amount>0).reduce((s,r)=>s+r.amount,0);
+  const netText=total<0?"-"+fmt(Math.abs(total)):fmt(total);
+  const parts=["共 "+records.length+" 筆","淨現流 "+netText];
+  if(inc) parts.push("流入 "+fmt(inc));
+  if(exp) parts.push("流出 "+fmt(Math.abs(exp)));
+  return parts.map(p=>"<span>"+p+"</span>").join("");
+}
 function renderRecords(){
   const filtered=applyFilters(loadRecords()).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
   const list=document.getElementById('records-list');
@@ -1739,11 +1750,12 @@ function renderRecords(){
   const groups={};
   filtered.forEach(r=>{ (groups[r.date]=groups[r.date]||[]).push(r); });
   const sortedDates=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
-  const multiMonth=new Set(sortedDates.map(d=>d.slice(0,7))).size>1;
+  const monthGroups={};
+  filtered.forEach(r=>{ const m=r.date.slice(0,7); (monthGroups[m]=monthGroups[m]||[]).push(r); });
   let lastMonth='';
   list.innerHTML=sortedDates.map(date=>{
     const month=date.slice(0,7);
-    const monthHeader=(multiMonth&&month!==lastMonth)?(lastMonth=month,`<div class="date-month-label">${formatMonthLabel(month)}</div>`):'';
+    const monthHeader=month!==lastMonth?(lastMonth=month,`<div class="date-month-label"><span>${formatMonthLabel(month)}</span><span class="date-month-summary">${flowSummaryHTML(monthGroups[month])}</span></div>`):'';
     return `${monthHeader}<div class="date-group-label">${formatDateLabel(date)}</div>
     <div class="card" style="padding:4px 14px">${groups[date].map(txItemHTML).join('')}</div>`;
   }).join('');
@@ -3594,8 +3606,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.13';
+const APP_VERSION='friends-1.14';
 const CHANGELOG=[
+  {version:'friends-1.14',date:'2026-06-06',items:[
+    '記錄頁月份標題旁新增共幾筆、淨現流、流入與流出摘要',
+  ]},
   {version:'friends-1.13',date:'2026-06-02',items:[
     '信用卡區繳款日改為每月獨立，只顯示當月實際繳款日期',
     '記錄篩選新增本月與上月快捷按鈕，可直接套用日期範圍',
