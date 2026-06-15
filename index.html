@@ -226,7 +226,18 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
 .btn{padding:12px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;width:100%}
 .btn-primary{background:var(--primary);color:#fff}
+.btn-secondary{background:#F3F4F6;color:#6B7280}
 .btn-danger{background:#FFF1F2;color:#EF4444;border:1.5px solid #FECDD3}
+.backup-range-options{display:grid;gap:8px}
+.backup-range-option{border:1.5px solid #E5E7EB;border-radius:12px;background:#fff;padding:12px 14px;text-align:left;font-size:14px;font-weight:700;color:#1A1A2E;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.backup-range-option.active{border-color:var(--primary);background:var(--primary-tint);color:var(--primary)}
+.backup-range-count{font-size:12px;color:#9BA3AF;font-weight:600;margin-left:10px}
+.backup-range-option.active .backup-range-count{color:var(--primary)}
+.backup-custom-dates{display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.backup-custom-dates.show{display:grid}
+.backup-custom-dates label{display:block;font-size:12px;color:#6B7280;font-weight:700;margin-bottom:5px}
+.backup-custom-dates input{width:100%;box-sizing:border-box;border:1.5px solid #E5E7EB;border-radius:10px;padding:10px 9px;font-size:14px;outline:none;-webkit-appearance:none}
+.backup-custom-dates input:focus{border-color:var(--primary)}
 .prompt-overlay{z-index:900;align-items:center;padding:20px}
 .prompt-modal{background:#fff;border-radius:18px;padding:20px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
 .prompt-title{font-size:18px;font-weight:700;color:#1A1A2E;margin-bottom:14px;line-height:1.4}
@@ -350,6 +361,46 @@ input[type=number]{-moz-appearance:textfield}
 </div>
 
 <!-- 更新日誌 Modal -->
+<div class="overlay" id="backup-range-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">📤 選擇備份期間</div>
+        <div style="font-size:12px;color:#9BA3AF;margin-top:2px">只篩選記帳資料，清單設定會完整匯出</div>
+      </div>
+      <button class="modal-close" onclick="closeBackupRangeModal()">✕</button>
+    </div>
+    <div class="backup-range-options">
+      <button type="button" class="backup-range-option active" data-range="all" onclick="selectBackupRange('all')">
+        <span>全部資料</span><span class="backup-range-count" id="backup-count-all"></span>
+      </button>
+      <button type="button" class="backup-range-option" data-range="current" onclick="selectBackupRange('current')">
+        <span>本月</span><span class="backup-range-count" id="backup-count-current"></span>
+      </button>
+      <button type="button" class="backup-range-option" data-range="prev" onclick="selectBackupRange('prev')">
+        <span>上月</span><span class="backup-range-count" id="backup-count-prev"></span>
+      </button>
+      <button type="button" class="backup-range-option" data-range="custom" onclick="selectBackupRange('custom')">
+        <span>自訂期間</span><span class="backup-range-count" id="backup-count-custom"></span>
+      </button>
+    </div>
+    <div class="backup-custom-dates" id="backup-custom-dates">
+      <div>
+        <label for="backup-from">開始日期</label>
+        <input type="date" id="backup-from" min="1000-01-01" max="9999-12-31" onchange="updateBackupCustomCount()">
+      </div>
+      <div>
+        <label for="backup-to">結束日期</label>
+        <input type="date" id="backup-to" min="1000-01-01" max="9999-12-31" onchange="updateBackupCustomCount()">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" type="button" onclick="closeBackupRangeModal()">取消</button>
+      <button class="btn btn-primary" type="button" onclick="confirmBackupExport()">下載備份</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="changelog-overlay">
   <div class="modal">
     <div class="modal-header">
@@ -706,7 +757,7 @@ input[type=number]{-moz-appearance:textfield}
       <div id="ss-backup" class="settings-section-title">🛠️ 維護與工具</div>
       <button class="settings-btn" onclick="exportJSON()">
         <div class="s-icon" style="background:#F0FDF4">📤</div>
-        <div class="s-text"><div class="s-title">匯出 JSON 備份</div><div class="s-desc">下載所有記帳資料與清單設定</div></div>
+        <div class="s-text"><div class="s-title">匯出 JSON 備份</div><div class="s-desc">可選擇備份期間，清單設定會一併下載</div></div>
         <span class="s-arrow">›</span>
       </button>
       <button class="settings-btn" onclick="importJSON()">
@@ -3456,12 +3507,85 @@ async function editLoanName(id){
 }
 
 // ─── Backup / restore ──────────────────────────────────────────────────────
-function exportJSON(){
-  const payload={records:loadRecords(),methods_grouped:loadMG(),categories:loadCats(),income_cats:loadIncome(),fixed:loadFixed(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets(),app_name:localStorage.getItem(KEY_APP_NAME)||''};
+let backupRangeMode='all';
+function buildBackupPayload(records, rangeInfo){
+  return {records,methods_grouped:loadMG(),categories:loadCats(),income_cats:loadIncome(),fixed:loadFixed(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets(),app_name:localStorage.getItem(KEY_APP_NAME)||'',backup_range:rangeInfo};
+}
+function backupMonthRange(offset){
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth()+offset,1);
+  const end=new Date(now.getFullYear(),now.getMonth()+offset+1,0);
+  return {from:dateInputStr(start),to:dateInputStr(end)};
+}
+function backupRecordRangeInfo(mode){
+  if(mode==='current') return {type:'current',...backupMonthRange(0),label:'本月'};
+  if(mode==='prev') return {type:'prev',...backupMonthRange(-1),label:'上月'};
+  if(mode==='custom'){
+    return {type:'custom',from:document.getElementById('backup-from').value,to:document.getElementById('backup-to').value,label:'自訂期間'};
+  }
+  return {type:'all',from:'',to:'',label:'全部資料'};
+}
+function backupRecordsForRange(mode){
+  const info=backupRecordRangeInfo(mode);
+  const records=loadRecords().filter(r=>{
+    if(!r.date) return info.type==='all';
+    if(info.from&&r.date<info.from) return false;
+    if(info.to&&r.date>info.to) return false;
+    return true;
+  });
+  return {records,info};
+}
+function backupRangeSuffix(info){
+  if(info.type==='all') return 'all';
+  if(info.type==='current') return info.from.slice(0,7);
+  if(info.type==='prev') return info.from.slice(0,7);
+  return `${info.from||'start'}_${info.to||'end'}`;
+}
+function downloadBackup(records, info){
+  const payload=buildBackupPayload(records, info);
   const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=`friends_backup_${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(url); showToast('📤 已下載備份');
+  const a=document.createElement('a'); a.href=url; a.download=`friends_backup_${localDateStr()}_${backupRangeSuffix(info)}.json`;
+  a.click(); URL.revokeObjectURL(url); showToast(`📤 已下載 ${records.length} 筆備份`);
+}
+function exportJSON(){
+  openBackupRangeModal();
+}
+function openBackupRangeModal(){
+  backupRangeMode='all';
+  const all=loadRecords().map(r=>r.date).filter(Boolean).sort();
+  const fromEl=document.getElementById('backup-from');
+  const toEl=document.getElementById('backup-to');
+  fromEl.value=all[0]||localDateStr();
+  toEl.value=all[all.length-1]||localDateStr();
+  selectBackupRange('all');
+  updateBackupRangeCounts();
+  document.getElementById('backup-range-overlay').classList.add('open');
+}
+function closeBackupRangeModal(){
+  document.getElementById('backup-range-overlay').classList.remove('open');
+}
+function selectBackupRange(mode){
+  backupRangeMode=mode;
+  document.querySelectorAll('#backup-range-overlay .backup-range-option').forEach(btn=>btn.classList.toggle('active',btn.dataset.range===mode));
+  document.getElementById('backup-custom-dates').classList.toggle('show',mode==='custom');
+  updateBackupCustomCount();
+}
+function updateBackupRangeCounts(){
+  ['all','current','prev','custom'].forEach(mode=>{
+    const el=document.getElementById(`backup-count-${mode}`);
+    if(el) el.textContent=`${backupRecordsForRange(mode).records.length} 筆`;
+  });
+}
+function updateBackupCustomCount(){
+  const custom=document.getElementById('backup-count-custom');
+  if(custom) custom.textContent=`${backupRecordsForRange('custom').records.length} 筆`;
+}
+function confirmBackupExport(){
+  const {records,info}=backupRecordsForRange(backupRangeMode);
+  if(info.from&&info.to&&info.from>info.to){ showToast('開始日期不能晚於結束日期'); return; }
+  closeBackupRangeModal();
+  downloadBackup(records, info);
 }
 function importJSON(){ document.getElementById('json-file-input').click(); }
 function handleJSONImport(e){
@@ -3606,8 +3730,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.14';
+const APP_VERSION='friends-1.15';
 const CHANGELOG=[
+  {version:'friends-1.15',date:'2026-06-15',items:[
+    '匯出 JSON 備份時可選擇全部、本月、上月或自訂期間',
+  ]},
   {version:'friends-1.14',date:'2026-06-06',items:[
     '記錄頁月份標題旁新增共幾筆、淨現流、流入與流出摘要',
   ]},
