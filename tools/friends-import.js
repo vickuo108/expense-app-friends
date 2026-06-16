@@ -9,27 +9,31 @@ const CLOUD_DOC = 'friends-main';
 function usage() {
   console.log(`Usage:
   node tools/friends-import.js --input import.json --out backup.json
+  FRIENDS_EMAIL=... FRIENDS_PASSWORD=... node tools/friends-import.js --input import.json --dry-run-cloud
   FRIENDS_EMAIL=... FRIENDS_PASSWORD=... node tools/friends-import.js --input import.json --cloud
+  FRIENDS_EMAIL=... FRIENDS_PASSWORD=... node tools/friends-import.js --list-settings
 
 Input format:
   {
     "date": "2026-06-16",
     "source": "Vic weekly summary 2026-06-09~2026-06-15",
-    "defaultMethod": "無",
+    "defaultMethod": "LINE Pay",
     "records": [
-      {"main":"主食","sub":"晚餐","amount":3271,"note":"optional"}
+      {"main":"餐食","sub":"晚餐","amount":3271,"note":"optional"}
     ]
   }
 `);
 }
 
 function parseArgs(argv) {
-  const args = { cloud: false };
+  const args = { cloud: false, dryRunCloud: false };
   for (let i = 2; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--input') args.input = argv[++i];
     else if (a === '--out') args.out = argv[++i];
     else if (a === '--cloud') args.cloud = true;
+    else if (a === '--dry-run-cloud') args.dryRunCloud = true;
+    else if (a === '--list-settings') args.listSettings = true;
     else if (a === '--help' || a === '-h') args.help = true;
     else throw new Error(`Unknown argument: ${a}`);
   }
@@ -63,7 +67,7 @@ function loadImport(file) {
   if (!Array.isArray(raw.records) || raw.records.length === 0) {
     throw new Error('records must be a non-empty array');
   }
-  const defaultMethod = raw.defaultMethod || '無';
+  const defaultMethod = raw.defaultMethod || 'LINE Pay';
   const source = typeof raw.source === 'string' ? raw.source : 'Vic AI 匯入';
   const records = raw.records
     .filter(r => Number(String(r.amount).replace(/,/g, '')) > 0)
@@ -101,6 +105,50 @@ function mergeRecords(existing, incoming) {
     }
   }
   return added;
+}
+
+function settingList(values) {
+  return Array.isArray(values) ? values : [];
+}
+
+function validateAgainstSettings(records, cloud) {
+  const methods = new Set(Object.values(cloud.methods_grouped || {}).flat());
+  const categories = cloud.categories || {};
+  const incomeCats = new Set(settingList(cloud.income_cats));
+  const fixed = new Set(settingList(cloud.fixed).map(x => x.name).filter(Boolean));
+  const loans = new Set(settingList(cloud.loans).map(x => x.name).filter(Boolean));
+  const errors = [];
+
+  for (const r of records) {
+    if (r.method && r.method !== '無' && !methods.has(r.method)) {
+      errors.push(`付款方式不存在：${r.method}`);
+    }
+    if (r.type === '收入') {
+      if (!incomeCats.has(r.main)) errors.push(`收入類別不存在：${r.main}`);
+      continue;
+    }
+    if (r.main === '固定支出') {
+      if (!fixed.has(r.sub)) errors.push(`固定支出不存在：${r.sub}`);
+      continue;
+    }
+    if (r.main === '貸款') {
+      if (!loans.has(r.sub)) errors.push(`貸款不存在：${r.sub}`);
+      continue;
+    }
+    if (!Object.prototype.hasOwnProperty.call(categories, r.main)) {
+      errors.push(`主類別不存在：${r.main}`);
+      continue;
+    }
+    const subs = new Set(settingList(categories[r.main]));
+    if (r.sub && !subs.has(r.sub)) {
+      errors.push(`子類別不存在：${r.main} / ${r.sub}`);
+    }
+  }
+
+  const uniqueErrors = [...new Set(errors)];
+  if (uniqueErrors.length) {
+    throw new Error(`設定名稱不匹配，已停止匯入：\n${uniqueErrors.map(x => `- ${x}`).join('\n')}`);
+  }
 }
 
 function buildBackup(importData) {
@@ -188,10 +236,10 @@ function plainToFirestore(data) {
   return { fields: Object.fromEntries(Object.entries(data).map(([k, v]) => [k, toFirestoreValue(v)])) };
 }
 
-async function importToCloud(importData) {
+async function loadCloudData() {
   const email = process.env.FRIENDS_EMAIL;
   const password = process.env.FRIENDS_PASSWORD;
-  if (!email || !password) throw new Error('Set FRIENDS_EMAIL and FRIENDS_PASSWORD before using --cloud');
+  if (!email || !password) throw new Error('Set FRIENDS_EMAIL and FRIENDS_PASSWORD before using cloud mode');
   const auth = await signIn(email, password);
   let cloud = {};
   try {
@@ -202,6 +250,20 @@ async function importToCloud(importData) {
   } catch (err) {
     if (!String(err.message).includes('NOT_FOUND')) throw err;
   }
+  return { auth, cloud };
+}
+
+async function dryRunCloud(importData) {
+  const { cloud } = await loadCloudData();
+  validateAgainstSettings(importData.records, cloud);
+  const existing = Array.isArray(cloud.records) ? cloud.records.map(r => ({ ...r })) : [];
+  const added = mergeRecords(existing, importData.records);
+  return added;
+}
+
+async function importToCloud(importData) {
+  const { auth, cloud } = await loadCloudData();
+  validateAgainstSettings(importData.records, cloud);
   const existing = Array.isArray(cloud.records) ? cloud.records : [];
   const added = mergeRecords(existing, importData.records);
   cloud.records = existing;
@@ -213,13 +275,33 @@ async function importToCloud(importData) {
   return added;
 }
 
+async function listCloudSettings() {
+  const { cloud } = await loadCloudData();
+  return {
+    methods: Object.values(cloud.methods_grouped || {}).flat(),
+    categories: cloud.categories || {},
+    income_cats: cloud.income_cats || [],
+    fixed: settingList(cloud.fixed).map(x => x.name).filter(Boolean),
+    loans: settingList(cloud.loans).map(x => x.name).filter(Boolean),
+  };
+}
+
 async function main() {
   const args = parseArgs(process.argv);
+  if (args.listSettings) {
+    console.log(JSON.stringify(await listCloudSettings(), null, 2));
+    return;
+  }
   if (args.help || !args.input) {
     usage();
     process.exit(args.help ? 0 : 1);
   }
   const importData = loadImport(args.input);
+  if (args.dryRunCloud) {
+    const added = await dryRunCloud(importData);
+    console.log(JSON.stringify({ status: 'cloud_dry_run_ok', wouldAdd: added.length }, null, 2));
+    return;
+  }
   if (args.cloud) {
     const added = await importToCloud(importData);
     console.log(JSON.stringify({ status: 'cloud_imported', added: added.length }, null, 2));

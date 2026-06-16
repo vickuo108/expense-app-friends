@@ -1,19 +1,17 @@
 {
   "date": "2026-06-16",
   "source": "Vic 週統計 2026-06-09~2026-06-15",
-  "defaultMethod": "無",
+  "defaultMethod": "LINE Pay",
   "records": [
-    { "main": "主食", "sub": "晚餐", "amount": 3271 },
-    { "main": "主食", "sub": "早餐", "amount": 190 },
-    { "main": "主食", "sub": "宵夜", "amount": 710 },
-    { "main": "主食", "sub": "午餐", "amount": 744 },
-    { "main": "生活居家用品", "sub": "生活必需品", "amount": 830 },
+    { "main": "餐食", "sub": "晚餐", "amount": 3271 },
+    { "main": "餐食", "sub": "早餐", "amount": 190 },
+    { "main": "餐食", "sub": "（希望沒有）宵夜", "amount": 710 },
+    { "main": "餐食", "sub": "午餐", "amount": 744 },
+    { "main": "生活用品", "sub": "生活必需品", "amount": 830 },
     { "main": "運動", "sub": "匹克", "amount": 170 },
     { "main": "運動", "sub": "健身", "amount": 888 },
     { "main": "運動", "sub": "羽球", "amount": 250 },
-    { "main": "醫療費", "sub": "西醫", "amount": 600 },
-    { "main": "保養美容", "sub": "保養品", "amount": 130 },
-    { "main": "休閒娛樂", "sub": "聚餐", "amount": 660 },
-    { "main": "零食、飲料", "sub": "甜點", "amount": 190 }
+    { "main": "生活用品", "sub": "保養品", "amount": 130 },
+    { "main": "餐食", "sub": "點心", "amount": 190 }
   ]
 }
