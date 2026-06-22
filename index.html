@@ -989,6 +989,7 @@ const THEMES=[
   {id:'violet',name:'紫',   primary:'#7C3AED',light:'#8B5CF6',darker:'#6D28D9',tint:'#F5F3FF',deep:'#4C1D95',border:'#DDD6FE',s12:'rgba(124,58,237,.12)',s20:'rgba(124,58,237,.20)',s25:'rgba(124,58,237,.25)',s35:'rgba(124,58,237,.35)'},
   {id:'rose',  name:'玫瑰', primary:'#E11D48',light:'#F43F5E',darker:'#BE123C',tint:'#FFF1F2',deep:'#881337',border:'#FECDD3',s12:'rgba(225,29,72,.12)', s20:'rgba(225,29,72,.20)', s25:'rgba(225,29,72,.25)', s35:'rgba(225,29,72,.35)'},
   {id:'amber', name:'橙',   primary:'#D97706',light:'#F59E0B',darker:'#B45309',tint:'#FFFBEB',deep:'#78350F',border:'#FDE68A',s12:'rgba(217,119,6,.12)', s20:'rgba(217,119,6,.20)', s25:'rgba(217,119,6,.25)', s35:'rgba(217,119,6,.35)'},
+  {id:'silver',name:'金屬銀',primary:'#64748B',light:'#94A3B8',darker:'#475569',tint:'#F8FAFC',deep:'#334155',border:'#CBD5E1',s12:'rgba(100,116,139,.12)',s20:'rgba(100,116,139,.20)',s25:'rgba(100,116,139,.25)',s35:'rgba(100,116,139,.35)',swatch:'linear-gradient(135deg,#F8FAFC 0%,#94A3B8 28%,#FFFFFF 50%,#64748B 74%,#E2E8F0 100%)'},
 ];
 const FRIENDS_CLOUD_DOC='friends-main';
 const FRIENDS_FIREBASE_APP='expenseFriends';
@@ -2914,7 +2915,7 @@ function renderThemePicker(){
   el.innerHTML=THEMES.map(t=>`
     <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
       <div class="theme-swatch${t.id===cur?' theme-swatch-active':''}" data-tid="${t.id}"
-        style="background:${t.primary}" onclick="applyTheme('${t.id}')"></div>
+        style="background:${t.swatch||t.primary}" onclick="applyTheme('${t.id}')"></div>
       <div class="theme-label">${t.name}</div>
     </div>`).join('');
 }
@@ -3730,8 +3731,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.15';
+const APP_VERSION='friends-1.16';
 const CHANGELOG=[
+  {version:'friends-1.16',date:'2026-06-23',items:[
+    '設定頁新增金屬銀介面主題與反光漸層色票',
+  ]},
   {version:'friends-1.15',date:'2026-06-15',items:[
     '匯出 JSON 備份時可選擇全部、本月、上月或自訂期間',
   ]},
