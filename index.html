@@ -1921,7 +1921,7 @@ function copyRecord(id){
   const records=loadRecords();
   const orig=records.find(r=>r.id===id);
   if(!orig) return;
-  const copy={...orig, id:genId(), date:localDateStr()};
+  const copy={...orig, id:genId()};
   records.unshift(copy);
   saveRecords(records);
   renderRecords(); updateHeaderSub(); renderStats(); showToast('✅ 已複製');
@@ -3754,8 +3754,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.17';
+const APP_VERSION='friends-1.18';
 const CHANGELOG=[
+  {version:'friends-1.18',date:'2026-07-10',items:[
+    '複製紀錄時保留原本日期，不再自動改成今天',
+  ]},
   {version:'friends-1.17',date:'2026-07-07',items:[
     '報表頁年度報表會記住前次選擇的月份',
   ]},

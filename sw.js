@@ -1,4 +1,4 @@
-const CACHE = 'expense-friends-v18';
+const CACHE = 'expense-friends-v19';
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(['./', './index.html'])));
   // 不再自動 skipWaiting，等使用者點擊「立即更新」再切換
