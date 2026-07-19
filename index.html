@@ -1580,12 +1580,10 @@ function initFormListeners(){
 
 function autoFillAmtSign(){
   const t=document.getElementById('f-type').value;
-  const main=document.getElementById('f-main').value;
   const el=document.getElementById('f-amount');
-  const isPlanTransfer=t==='內部轉帳'&&isFinPlanName(main);
-  const shouldNegative=(t==='費用'||t==='成本'||t==='清償負債'||t==='投資'||(t==='內部轉帳'&&!isPlanTransfer));
+  const shouldNegative=(t==='費用'||t==='成本'||t==='清償負債'||t==='投資'||t==='內部轉帳');
   if(shouldNegative&&el.value==='') el.value='-';
-  if((!shouldNegative||isPlanTransfer)&&el.value==='-') el.value='';
+  if(!shouldNegative&&el.value==='-') el.value='';
 }
 function calcLoanInterest(prefix){
   const amt=parseAmt(document.getElementById(`${prefix}-amount`).value);
@@ -3754,8 +3752,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.18';
+const APP_VERSION='friends-1.19';
 const CHANGELOG=[
+  {version:'friends-1.19',date:'2026-07-19',items:[
+    '內部轉帳選擇財務規劃帳戶時，金額欄會預設負號',
+  ]},
   {version:'friends-1.18',date:'2026-07-10',items:[
     '複製紀錄時保留原本日期，不再自動改成今天',
   ]},
