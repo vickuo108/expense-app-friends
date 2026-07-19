@@ -817,8 +817,11 @@ input[type=number]{-moz-appearance:textfield}
           <button class="rep-view-btn" onclick="setRepView('qm',this)">季&amp;月報表</button>
         </div>
         <div id="rep-month-selector" style="display:flex;gap:6px;overflow-x:auto;padding:6px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none"></div>
-        <div id="rep-copy-btn-wrap" style="display:none;margin-bottom:4px">
-          <button onclick="copyLastMonthBudget()" style="padding:7px 14px;border:1.5px solid #CBD5E1;border-radius:8px;background:#fff;font-size:12px;color:#374151;cursor:pointer">📋 帶入上月預估</button>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
+          <div id="rep-copy-btn-wrap" style="display:none">
+            <button onclick="copyLastMonthBudget()" style="padding:7px 14px;border:1.5px solid #CBD5E1;border-radius:8px;background:#fff;font-size:12px;color:#374151;cursor:pointer">📋 帶入上月預估</button>
+          </div>
+          <button onclick="exportReportPDF()" style="padding:7px 14px;border:1.5px solid var(--primary);border-radius:8px;background:#fff;font-size:12px;color:var(--primary-deep);cursor:pointer;font-weight:600">📄 匯出 PDF</button>
         </div>
       </div>
       <!-- 年度報表 -->
@@ -1165,10 +1168,14 @@ function loanBudgetTotal(moB){
 function costBudgetKey(cat){ return `cost:${cat}`; }
 function expenseBudgetValue(v){ return v?-Math.abs(v):0; }
 function fmtBudget(n){ return n?(n<0?`<span class="clr-expense">${fmt(n)}</span>`:fmt(n)):''; }
+function formatBudgetInput(input){
+  const n=parseAmt(input.value);
+  input.value=n?fmt(n):'';
+}
 function saveMonthBudgetItem(ym,cat,val){
   const all=loadMonthlyBudgets();
   if(!all[ym]) all[ym]={};
-  const n=parseFloat(val);
+  const n=parseAmt(val);
   if(!isNaN(n)&&n!==0) all[ym][cat]=n; else delete all[ym][cat];
   if(!Object.keys(all[ym]).length) delete all[ym];
   saveMonthlyBudgets(all);
@@ -2110,6 +2117,7 @@ function setRepView(v, btn){
   document.getElementById('rep-view-year').style.display=v==='year'?'':'none';
   document.getElementById('rep-view-qm').style.display=v==='qm'?'':'none';
   document.getElementById('rep-month-selector').style.display=v==='year'?'flex':'none';
+  document.getElementById('rep-copy-btn-wrap').style.display=v==='year'&&reportMonth!==0?'block':'none';
   renderFinReport();
 }
 
@@ -2130,7 +2138,11 @@ function copyLastMonthBudget(){
 function renderFinReport(){
   document.getElementById('rep-year-label').textContent=`${reportYear} 年`;
   syncReportMonthButtons();
-  if(repView==='qm'){ renderQMReport(); return; }
+  if(repView==='qm'){
+    document.getElementById('rep-copy-btn-wrap').style.display='none';
+    renderQMReport();
+    return;
+  }
   const data=loadRecords();
   const isAnnual=reportMonth===0;
   document.querySelector('#rep-view-year thead tr').innerHTML=isAnnual
@@ -2163,8 +2175,9 @@ function renderFinReport(){
   // 有 cat 且為單月時，預估欄顯示可編輯輸入框
   const budgetCell=(b,cat)=>{
     if(!isAnnual&&cat!=null)
-      return `<td><input type="number" class="rep-budget-input" value="${b||''}" placeholder="−" step="1"
-        onblur="saveMonthBudgetItem('${pfx}','${cat.replace(/'/g,"\\'")}',this.value);scheduleRenderFinReport()"
+      return `<td><input type="text" inputmode="numeric" class="rep-budget-input" value="${b?fmt(b):''}" placeholder="−"
+        onfocus="this.value=this.value.replace(/,/g,'')"
+        onblur="saveMonthBudgetItem('${pfx}','${cat.replace(/'/g,"\\'")}',this.value);formatBudgetInput(this);scheduleRenderFinReport()"
         onkeydown="if(event.key==='Enter')this.blur()"></td>`;
     return `<td>${fmtB(b)}</td>`;
   };
@@ -2341,6 +2354,244 @@ function renderQMReport(){
   html+=mkRow('合計',sumB([0,1,2,3,4,5,6,7,8,9,10,11]),totalA,null,'qm-total',true);
 
   document.getElementById('qm-tbody').innerHTML=html;
+}
+
+function getReportPdfTable(){
+  const table=repView==='qm'
+    ?document.querySelector('#rep-view-qm .qm-table')
+    :document.querySelector('#rep-view-year .report-table');
+  if(!table) return null;
+  const rows=[...table.querySelectorAll('tr')].map(tr=>({
+    type:tr.classList.contains('rep-grp')?'group':
+      tr.classList.contains('rep-tot')||tr.classList.contains('qm-total')?'total':
+      tr.classList.contains('rep-net')?'net':
+      tr.classList.contains('qm-q')?'quarter':'normal',
+    cells:[...tr.children].map(cell=>{
+      const input=cell.querySelector('input');
+      return (input?(input.value||'−'):cell.textContent).trim().replace(/\s+/g,' ');
+    })
+  })).filter(r=>r.cells.some(Boolean));
+  return rows.length?rows:null;
+}
+
+function getQmReportPdfSections(rows){
+  const body=rows.slice(2);
+  const labels=['預估','實際','差距','達成率','MOM/QOQ'];
+  const build=(title,groups)=>({
+    title,
+    rows:[
+      {
+        type:'qm-group-header',
+        cells:Array(1+groups.length*labels.length).fill(''),
+        spans:[
+          ...groups.map((g,idx)=>({label:g.name,start:1+idx*labels.length,span:labels.length}))
+        ]
+      },
+      {type:'qm-sub-header',cells:['月份',...groups.flatMap(()=>labels)]},
+      ...body.map(row=>({
+        type:row.type,
+        cells:[row.cells[0],...groups.flatMap(g=>row.cells.slice(g.start,g.start+5))]
+      }))
+    ]
+  });
+  return [
+    build('收入 / 成本',[{name:'收入',start:1},{name:'成本',start:6}]),
+    build('費用 / 淨利',[{name:'費用',start:11},{name:'淨利',start:16}])
+  ];
+}
+
+function splitPdfText(ctx,text,maxWidth){
+  const src=String(text||'');
+  if(ctx.measureText(src).width<=maxWidth) return [src];
+  const parts=[]; let line='';
+  for(const ch of src){
+    if(ctx.measureText(line+ch).width<=maxWidth){ line+=ch; }
+    else{
+      if(line) parts.push(line);
+      line=ch;
+    }
+  }
+  if(line) parts.push(line);
+  return parts.slice(0,2);
+}
+
+function drawReportPdfPages(rows,title,subtitle,landscape,opts={}){
+  const scale=2;
+  const pagePt=landscape?{w:842,h:595}:{w:595,h:842};
+  const pagePx={w:pagePt.w*scale,h:pagePt.h*scale};
+  const margin=28*scale;
+  const tableTop=(opts.tableTop??86)*scale;
+  const rowBase=(opts.rowBase??36)*scale;
+  const rowTall=(opts.rowTall??52)*scale;
+  const headerH=(opts.headerH??44)*scale;
+  const footerH=22*scale;
+  const font='-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",Arial,sans-serif';
+  const headerRows=opts.headerRows??(repView==='qm'?2:1);
+  const bodyStart=headerRows;
+  const tableW=pagePx.w-margin*2;
+  const colCount=Math.max(...rows.map(r=>r.cells.length));
+  const firstColW=(opts.firstColW??(repView==='qm'?58:72))*scale;
+  const otherW=(tableW-firstColW)/(colCount-1||1);
+  const colW=Array.from({length:colCount},(_,i)=>i===0?firstColW:otherW);
+  const pages=[];
+  let bodyIndex=bodyStart;
+
+  while(bodyIndex<rows.length||!pages.length){
+    const canvas=document.createElement('canvas');
+    canvas.width=pagePx.w; canvas.height=pagePx.h;
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#FFFFFF'; ctx.fillRect(0,0,pagePx.w,pagePx.h);
+    ctx.fillStyle='#111827';
+    ctx.font=`700 ${26*scale}px ${font}`;
+    ctx.fillText(title,margin,34*scale);
+    ctx.font=`400 ${13*scale}px ${font}`;
+    ctx.fillStyle='#6B7280';
+    ctx.fillText(subtitle,margin,54*scale);
+    ctx.textBaseline='middle';
+
+    let y=tableTop;
+    const drawRow=(row,rowH,isHeader=false)=>{
+      let x=margin;
+      const fill=isHeader?'#F8FAFC':
+        row.type==='group'?'#EFF6FF':
+        row.type==='total'||row.type==='net'||row.type==='quarter'?'#F3F4F6':'#FFFFFF';
+      ctx.fillStyle=fill; ctx.fillRect(margin,y,tableW,rowH);
+      ctx.strokeStyle='#E5E7EB'; ctx.lineWidth=1*scale;
+      ctx.beginPath(); ctx.moveTo(margin,y+rowH); ctx.lineTo(margin+tableW,y+rowH); ctx.stroke();
+      (opts.groupBoundaries||[]).forEach(boundary=>{
+        const bx=margin+colW.slice(0,boundary).reduce((s,w)=>s+w,0);
+        ctx.strokeStyle='#D1D5DB'; ctx.lineWidth=1.2*scale;
+        ctx.beginPath(); ctx.moveTo(bx,y); ctx.lineTo(bx,y+rowH); ctx.stroke();
+      });
+      if(row.spans){
+        ctx.fillStyle='#1F2937';
+        ctx.font=`700 18px ${font}`;
+        row.spans.forEach(span=>{
+          const sx=margin+colW.slice(0,span.start).reduce((s,w)=>s+w,0);
+          const sw=colW.slice(span.start,span.start+span.span).reduce((s,w)=>s+w,0);
+          ctx.textAlign='center';
+          ctx.fillText(span.label,sx+sw/2,y+rowH/2);
+        });
+        ctx.textAlign='left';
+        y+=rowH;
+        return;
+      }
+      row.cells.forEach((cell,i)=>{
+        const w=colW[i]||otherW;
+        ctx.fillStyle=isHeader||row.type!=='normal'?'#1F2937':'#374151';
+        const bodySize=i===0?20:19;
+        const fontSize=row.type==='qm-sub-header'?13:bodySize;
+        ctx.font=`${isHeader||row.type!=='normal'?'700':'400'} ${fontSize}px ${font}`;
+        const lines=splitPdfText(ctx,cell,w-10*scale);
+        const align=i===0?'left':'right';
+        lines.forEach((line,li)=>{
+          const tx=align==='left'?x+5*scale:x+w-5*scale;
+          const ty=y+rowH/2+(li-(lines.length-1)/2)*20*scale;
+          ctx.textAlign=align;
+          ctx.fillText(line,tx,ty);
+        });
+        x+=w;
+      });
+      ctx.textAlign='left';
+      y+=rowH;
+    };
+
+    for(let i=0;i<headerRows;i++) drawRow(rows[i],headerH,true);
+    while(bodyIndex<rows.length){
+      const row=rows[bodyIndex];
+      const rowH=row.cells[0]?.length>12?rowTall:rowBase;
+      if(y+rowH>pagePx.h-margin-footerH) break;
+      drawRow(row,rowH,false);
+      bodyIndex++;
+    }
+    ctx.textBaseline='alphabetic';
+    ctx.font=`400 ${12*scale}px ${font}`;
+    ctx.fillStyle='#9CA3AF';
+    ctx.fillText(`第 ${(opts.pageOffset||0)+pages.length+1} 頁`,margin,pagePx.h-16*scale);
+    pages.push({dataUrl:canvas.toDataURL('image/jpeg',0.92),width:pagePx.w,height:pagePx.h,pageW:pagePt.w,pageH:pagePt.h});
+  }
+  return pages;
+}
+
+function dataUrlToBytes(dataUrl){
+  const bin=atob(dataUrl.split(',')[1]);
+  const bytes=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return bytes;
+}
+
+function asciiBytes(s){ return new TextEncoder().encode(s); }
+
+function buildPdfFromJpegs(images){
+  const enc=s=>asciiBytes(s);
+  const objects=[];
+  const kids=images.map((_,i)=>`${3+i*3} 0 R`).join(' ');
+  objects[1]=[enc('<< /Type /Catalog /Pages 2 0 R >>')];
+  objects[2]=[enc(`<< /Type /Pages /Kids [${kids}] /Count ${images.length} >>`)];
+  images.forEach((img,i)=>{
+    const pageObj=3+i*3, imageObj=pageObj+1, contentObj=pageObj+2;
+    const jpg=dataUrlToBytes(img.dataUrl);
+    const content=enc(`q\n${img.pageW} 0 0 ${img.pageH} 0 0 cm\n/Im${i+1} Do\nQ`);
+    objects[pageObj]=[enc(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${img.pageW} ${img.pageH}] /Resources << /XObject << /Im${i+1} ${imageObj} 0 R >> >> /Contents ${contentObj} 0 R >>`)];
+    objects[imageObj]=[
+      enc(`<< /Type /XObject /Subtype /Image /Width ${img.width} /Height ${img.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpg.length} >>\nstream\n`),
+      jpg,
+      enc('\nendstream')
+    ];
+    objects[contentObj]=[
+      enc(`<< /Length ${content.length} >>\nstream\n`),
+      content,
+      enc('\nendstream')
+    ];
+  });
+
+  const chunks=[enc('%PDF-1.4\n')];
+  let len=chunks[0].length;
+  const offsets=[0];
+  for(let i=1;i<objects.length;i++){
+    offsets[i]=len;
+    const head=enc(`${i} 0 obj\n`);
+    const tail=enc('\nendobj\n');
+    chunks.push(head,...objects[i],tail);
+    len+=head.length+objects[i].reduce((s,b)=>s+b.length,0)+tail.length;
+  }
+  const xrefOffset=len;
+  let xref=`xref\n0 ${objects.length}\n0000000000 65535 f \n`;
+  for(let i=1;i<objects.length;i++) xref+=`${String(offsets[i]).padStart(10,'0')} 00000 n \n`;
+  xref+=`trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  chunks.push(enc(xref));
+  return new Blob(chunks,{type:'application/pdf'});
+}
+
+function exportReportPDF(){
+  renderFinReport();
+  const rows=getReportPdfTable();
+  if(!rows){ showToast('目前沒有可匯出的報表資料'); return; }
+  const mode=repView==='qm'?'季月報表':(reportMonth===0?'年度報表':'月份報表');
+  const scope=reportMonth===0?`${reportYear} 年`:`${reportYear} 年 ${reportMonth} 月`;
+  const title=`${scope} ${mode}`;
+  const subtitle=`匯出時間：${new Date().toLocaleString('zh-TW',{hour12:false})}`;
+  const pages=repView==='qm'
+    ?getQmReportPdfSections(rows).reduce((acc,section)=>{
+      const sectionPages=drawReportPdfPages(
+        section.rows,
+        `${reportYear} 年 季月報表（${section.title}）`,
+        subtitle,
+        true,
+        {headerRows:2,firstColW:50,tableTop:68,rowBase:23,rowTall:23,headerH:28,groupBoundaries:[1,6],pageOffset:acc.length}
+      );
+      return acc.concat(sectionPages);
+    },[])
+    :drawReportPdfPages(rows,title,subtitle,false);
+  const blob=buildPdfFromJpegs(pages);
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`friends_report_${reportYear}${reportMonth?`_${String(reportMonth).padStart(2,'0')}`:''}_${repView}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(url); a.remove(); },1000);
+  showToast('✅ 已匯出 PDF');
 }
 
 function renderBudgetEditor(){
@@ -3752,8 +4003,20 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.19';
+const APP_VERSION='friends-1.23';
 const CHANGELOG=[
+  {version:'friends-1.23',date:'2026-07-20',items:[
+    '只放大報表 PDF 表格文字與列高，標題、匯出時間與頁碼維持原大小',
+  ]},
+  {version:'friends-1.22',date:'2026-07-20',items:[
+    '再次放大報表 PDF 字體與列高，讓手機閱讀更清楚',
+  ]},
+  {version:'friends-1.21',date:'2026-07-20',items:[
+    '放大報表 PDF 的標題與表格文字，提升閱讀性',
+  ]},
+  {version:'friends-1.20',date:'2026-07-19',items:[
+    '報表頁新增匯出 PDF，可下載目前選擇的年度、月份或季月報表',
+  ]},
   {version:'friends-1.19',date:'2026-07-19',items:[
     '內部轉帳選擇財務規劃帳戶時，金額欄會預設負號',
   ]},
