@@ -4003,8 +4003,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.23';
+const APP_VERSION='friends-1.24';
 const CHANGELOG=[
+  {version:'friends-1.24',date:'2026-07-20',items:[
+    '修正 PWA 快取更新機制，避免手機版一直停在舊版本而不跳更新提示',
+  ]},
   {version:'friends-1.23',date:'2026-07-20',items:[
     '只放大報表 PDF 表格文字與列高，標題、匯出時間與頁碼維持原大小',
   ]},
