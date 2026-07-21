@@ -1,4 +1,4 @@
-const CACHE = 'expense-friends-v24';
+const CACHE = 'expense-friends-v27';
 const APP_SHELL = ['./', './index.html'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(APP_SHELL)));

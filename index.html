@@ -137,6 +137,13 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .month-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;background:#fff;border-radius:12px;padding:4px 10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
 .month-nav-btn{background:none;border:1.5px solid #E5E7EB;border-radius:8px;padding:2px 9px;cursor:pointer;font-size:15px;color:#374151}
 .month-label{font-size:16px;font-weight:800;color:#1A1A2E}
+.month-label-btn{border:none;background:transparent;padding:5px 12px;border-radius:10px;cursor:pointer}
+.month-label-btn:active{background:#EEF2FF}
+.stat-month-select-row{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+.stat-month-year{flex:1;border:1.5px solid #E5E7EB;border-radius:10px;padding:10px 12px;font-size:16px;font-weight:700;color:#1A1A2E;background:#fff}
+.stat-month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat-month-option{border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;padding:10px 0;font-size:14px;font-weight:700;color:#374151;cursor:pointer}
+.stat-month-option.active{border-color:var(--primary);background:var(--primary-tint);color:var(--primary)}
 
 /* Loan table */
 .loan-table{width:100%;border-collapse:collapse;font-size:12px}
@@ -415,6 +422,20 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 
+<!-- 統計年月選擇 Modal -->
+<div class="overlay" id="stat-month-overlay" onclick="if(event.target===this)closeStatMonthPicker()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">選擇統計月份</div>
+      <button class="modal-close" onclick="closeStatMonthPicker()">✕</button>
+    </div>
+    <div class="stat-month-select-row">
+      <select class="stat-month-year" id="stat-month-year" onchange="renderStatMonthOptions()"></select>
+    </div>
+    <div class="stat-month-grid" id="stat-month-grid"></div>
+  </div>
+</div>
+
 <div class="app">
 
   <div class="header">
@@ -525,6 +546,10 @@ input[type=number]{-moz-appearance:textfield}
             <select class="filter-select" id="filter-sub"><option value="">全部子類別</option></select>
           </div>
           <div class="filter-row">
+            <select class="filter-select" id="filter-year"><option value="">全部年份</option></select>
+            <select class="filter-select" id="filter-month"><option value="">全部月份</option></select>
+          </div>
+          <div class="filter-row">
             <input type="date" class="filter-select" id="filter-from" min="1000-01-01" max="9999-12-31" style="font-size:13px">
             <input type="date" class="filter-select" id="filter-to" min="1000-01-01" max="9999-12-31" style="font-size:13px">
           </div>
@@ -544,7 +569,7 @@ input[type=number]{-moz-appearance:textfield}
       <div class="stats-sticky-top">
         <div class="month-nav">
           <button class="month-nav-btn" id="stat-prev">‹</button>
-          <span class="month-label" id="stat-month-label"></span>
+          <button class="month-label month-label-btn" id="stat-month-label" type="button" onclick="openStatMonthPicker()"></button>
           <button class="month-nav-btn" id="stat-next">›</button>
         </div>
         <div class="stats-quicknav">
@@ -573,12 +598,12 @@ input[type=number]{-moz-appearance:textfield}
         <div class="stat-box">
           <div class="stat-box-label">可用金額</div>
           <div class="stat-box-val" id="s-cash">$0</div>
-          <div class="stat-box-sub">標記可用的帳戶合計</div>
+          <div class="stat-box-sub">截至本月底可用帳戶</div>
         </div>
         <div class="stat-box">
           <div class="stat-box-label">可用現金</div>
           <div class="stat-box-val" id="s-cash-only">$0</div>
-          <div class="stat-box-sub">現金帳戶合計</div>
+          <div class="stat-box-sub">截至本月底現金</div>
         </div>
         <div class="stat-box clickable" onclick="showMonthBalDetail()">
           <div class="stat-box-label">月可用餘額</div>
@@ -1456,6 +1481,8 @@ function populateFilterDropdowns(){
   restoreSelectValue(document.getElementById('filter-method'),state.method);
   document.getElementById('filter-from').value=state.from;
   document.getElementById('filter-to').value=state.to;
+  populateRecordYearMonthFilters();
+  syncRecordYearMonthFilters();
   updateClearBtn();
 }
 function getFilterState(){
@@ -1464,6 +1491,8 @@ function getFilterState(){
     method:document.getElementById('filter-method')?.value||'',
     main:document.getElementById('filter-main')?.value||'',
     sub:document.getElementById('filter-sub')?.value||'',
+    year:document.getElementById('filter-year')?.value||'',
+    month:document.getElementById('filter-month')?.value||'',
     from:document.getElementById('filter-from')?.value||'',
     to:document.getElementById('filter-to')?.value||'',
   };
@@ -1471,6 +1500,60 @@ function getFilterState(){
 function restoreSelectValue(el,value){
   if(!el||!value) return;
   if([...el.options].some(op=>op.value===value)) el.value=value;
+}
+function populateRecordYearMonthFilters(){
+  const yearEl=document.getElementById('filter-year');
+  const monthEl=document.getElementById('filter-month');
+  if(!yearEl||!monthEl) return;
+  const state=getFilterState();
+  const currentYear=String(new Date().getFullYear());
+  const years=[...new Set([currentYear,...loadRecords().map(r=>r.date?.slice(0,4)).filter(Boolean)])]
+    .filter(y=>/^\d{4}$/.test(y))
+    .sort((a,b)=>b.localeCompare(a));
+  yearEl.innerHTML='<option value="">全部年份</option>'+years.map(y=>`<option value="${y}">${y} 年</option>`).join('');
+  monthEl.innerHTML='<option value="">全部月份</option>'+Array.from({length:12},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1} 月</option>`).join('');
+  restoreSelectValue(yearEl,state.year);
+  restoreSelectValue(monthEl,state.month);
+}
+function syncRecordYearMonthFilters(){
+  const yearEl=document.getElementById('filter-year');
+  const monthEl=document.getElementById('filter-month');
+  const from=document.getElementById('filter-from')?.value||'';
+  const to=document.getElementById('filter-to')?.value||'';
+  if(!yearEl||!monthEl) return;
+  yearEl.value=''; monthEl.value='';
+  if(!from||!to) return;
+  const y=from.slice(0,4);
+  const m=from.slice(5,7);
+  const yearStart=`${y}-01-01`, yearEnd=`${y}-12-31`;
+  const monthEnd=dateInputStr(new Date(Number(y),Number(m),0));
+  if(from===`${y}-${m}-01`&&to===monthEnd){
+    restoreSelectValue(yearEl,y);
+    restoreSelectValue(monthEl,m);
+  } else if(from===yearStart&&to===yearEnd){
+    restoreSelectValue(yearEl,y);
+  }
+}
+function applyRecordYearMonthFilter(){
+  const yearEl=document.getElementById('filter-year');
+  const monthEl=document.getElementById('filter-month');
+  let year=yearEl.value;
+  const month=monthEl.value;
+  if(month&&!year){
+    year=String(new Date().getFullYear());
+    restoreSelectValue(yearEl,year);
+  }
+  if(!year){
+    document.getElementById('filter-from').value='';
+    document.getElementById('filter-to').value='';
+  } else if(month){
+    document.getElementById('filter-from').value=`${year}-${month}-01`;
+    document.getElementById('filter-to').value=dateInputStr(new Date(Number(year),Number(month),0));
+  } else {
+    document.getElementById('filter-from').value=`${year}-01-01`;
+    document.getElementById('filter-to').value=`${year}-12-31`;
+  }
+  renderRecords(); updateClearBtn();
 }
 
 // ─── Tab ───────────────────────────────────────────────────────────────────
@@ -1685,8 +1768,12 @@ function resetAddForm(lastRec=null){
 
 // ─── Records ───────────────────────────────────────────────────────────────
 function initSearchListeners(){
-  ['search-input','filter-type','filter-method','filter-sub','filter-from','filter-to']
+  ['search-input','filter-type','filter-method','filter-sub']
     .forEach(id=>document.getElementById(id).addEventListener(id==='search-input'?'input':'change',()=>{ renderRecords(); updateClearBtn(); }));
+  ['filter-from','filter-to']
+    .forEach(id=>document.getElementById(id).addEventListener('change',()=>{ syncRecordYearMonthFilters(); renderRecords(); updateClearBtn(); }));
+  ['filter-year','filter-month']
+    .forEach(id=>document.getElementById(id).addEventListener('change',applyRecordYearMonthFilter));
   document.getElementById('filter-main').addEventListener('change',()=>{
     fillSelect(document.getElementById('filter-sub'), filterSubOptions(document.getElementById('filter-main').value), '全部子類別');
     renderRecords(); updateClearBtn();
@@ -1707,6 +1794,7 @@ function applyRecordMonthFilter(which){
   const end=new Date(now.getFullYear(),now.getMonth()+offset+1,0);
   document.getElementById('filter-from').value=dateInputStr(start);
   document.getElementById('filter-to').value=dateInputStr(end);
+  syncRecordYearMonthFilters();
   renderRecords(); updateClearBtn();
 }
 function updateClearBtn(){
@@ -1720,7 +1808,7 @@ function hasActiveRecordFilters(){
 }
 function clearFilters(){
   document.getElementById('search-input').value='';
-  ['filter-type','filter-method','filter-main','filter-sub','filter-from','filter-to'].forEach(id=>{ document.getElementById(id).value=''; });
+  ['filter-type','filter-method','filter-main','filter-sub','filter-year','filter-month','filter-from','filter-to'].forEach(id=>{ document.getElementById(id).value=''; });
   updateClearBtn(); renderRecords();
 }
 
@@ -2048,6 +2136,34 @@ function deleteEdit(){
 function initStatNav(){
   document.getElementById('stat-prev').addEventListener('click',()=>{ statMonth--; if(statMonth<1){statMonth=12;statYear--;} renderStats(); });
   document.getElementById('stat-next').addEventListener('click',()=>{ statMonth++; if(statMonth>12){statMonth=1;statYear++;} renderStats(); });
+}
+function openStatMonthPicker(){
+  const yearSel=document.getElementById('stat-month-year');
+  const years=new Set(loadRecords().map(r=>parseInt((r.date||'').slice(0,4),10)).filter(Boolean));
+  const nowYear=new Date().getFullYear();
+  [statYear, nowYear, nowYear-1, nowYear+1].forEach(y=>years.add(y));
+  const sorted=[...years].sort((a,b)=>b-a);
+  yearSel.innerHTML=sorted.map(y=>`<option value="${y}">${y} 年</option>`).join('');
+  yearSel.value=String(statYear);
+  renderStatMonthOptions();
+  document.getElementById('stat-month-overlay').classList.add('open');
+}
+function renderStatMonthOptions(){
+  const year=parseInt(document.getElementById('stat-month-year').value,10)||statYear;
+  document.getElementById('stat-month-grid').innerHTML=Array.from({length:12},(_,i)=>{
+    const month=i+1;
+    const active=year===statYear&&month===statMonth?' active':'';
+    return `<button type="button" class="stat-month-option${active}" onclick="selectStatMonth(${year},${month})">${month} 月</button>`;
+  }).join('');
+}
+function selectStatMonth(year,month){
+  statYear=year;
+  statMonth=month;
+  closeStatMonthPicker();
+  renderStats();
+}
+function closeStatMonthPicker(){
+  document.getElementById('stat-month-overlay').classList.remove('open');
 }
 
 // ─── Financial Report ────────────────────────────────────────────────────────
@@ -2757,27 +2873,28 @@ function renderStats(){
   const totalInc=inc.reduce((s,r)=>s+r.amount,0);
   document.getElementById('s-expense').textContent=fmt(Math.abs(totalExp));
   document.getElementById('s-income').textContent=fmt(totalInc);
-  // 可用金額（標記可用的帳戶合計，含被轉入金額）
+  const untilSelectedMonth=r=>r.date&&r.date.slice(0,7)<=prefix;
+  // 可用金額（截至選取月份月底的標記可用帳戶合計，含被轉入金額）
   const bd=loadAcctBal(); const mg2=loadMG(); const avail2=loadAcctAvail();
   const bankEwAccts=[...(mg2['銀行帳戶']||[]),...(mg2['電子錢包']||[])];
   const cashAvail=bankEwAccts.reduce((s,name)=>{
     if(!avail2[name]) return s;
     const open=bd[name]||0;
-    const allTx=data.filter(r=>r.method===name).reduce((ss,r)=>ss+r.amount,0);
-    const incoming=data.filter(r=>r.main==='轉帳'&&r.sub===name).reduce((ss,r)=>ss-r.amount,0);
+    const allTx=data.filter(r=>untilSelectedMonth(r)&&r.method===name).reduce((ss,r)=>ss+r.amount,0);
+    const incoming=data.filter(r=>untilSelectedMonth(r)&&r.main==='轉帳'&&r.sub===name).reduce((ss,r)=>ss-r.amount,0);
     return s+open+allTx+incoming;
   },0);
   const cashEl=document.getElementById('s-cash');
   cashEl.textContent=fmt(Math.abs(cashAvail));
   cashEl.className='stat-box-val '+(cashAvail>=0?'clr-income':'clr-expense');
-  // 可用現金（現金帳戶合計 + 提款增加 + 現金存入減少）
+  // 可用現金（截至選取月份月底的現金帳戶合計 + 提款增加 + 現金存入減少）
   const cashAccts=mg2['現金']||[];
   const cashOnly=cashAccts.reduce((s,name)=>{
     const open=bd[name]||0;
-    const allTx=data.filter(r=>r.method===name).reduce((ss,r)=>ss+r.amount,0);
+    const allTx=data.filter(r=>untilSelectedMonth(r)&&r.method===name).reduce((ss,r)=>ss+r.amount,0);
     return s+open+allTx;
   },0);
-  const cashAdjust=data.filter(r=>r.main==='提款'||r.main==='現金存入').reduce((s,r)=>s-r.amount,0);
+  const cashAdjust=data.filter(r=>untilSelectedMonth(r)&&(r.main==='提款'||r.main==='現金存入')).reduce((s,r)=>s-r.amount,0);
   const totalCash=cashOnly+cashAdjust;
   const cashOnlyEl=document.getElementById('s-cash-only');
   cashOnlyEl.textContent=fmt(Math.abs(totalCash));
@@ -4003,8 +4120,17 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.24';
+const APP_VERSION='friends-1.27';
 const CHANGELOG=[
+  {version:'friends-1.27',date:'2026-07-21',items:[
+    '統計頁月份標題可直接開啟年月選擇器，快速切換到指定月份',
+  ]},
+  {version:'friends-1.26',date:'2026-07-21',items:[
+    '統計頁可用金額與可用現金改為截至選取月份月底計算，會跟月份切換連動',
+  ]},
+  {version:'friends-1.25',date:'2026-07-21',items:[
+    '記錄頁篩選新增年份與月份下拉選單，可快速套用整年或指定月份',
+  ]},
   {version:'friends-1.24',date:'2026-07-20',items:[
     '修正 PWA 快取更新機制，避免手機版一直停在舊版本而不跳更新提示',
   ]},
