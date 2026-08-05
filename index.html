@@ -62,6 +62,8 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .filter-select{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#fff;appearance:none;-webkit-appearance:none}
 .filter-multi-btn{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#fff;color:#1A1A2E;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .filter-multi-btn.has-values{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+.filter-card:not(.multi-mode) .filter-multi-btn{display:none}
+.filter-card.multi-mode .filter-single-select{display:none}
 .filter-mode-row{display:flex;justify-content:flex-end;margin-bottom:8px}
 .filter-mode-btn{padding:6px 12px;border:1.5px solid #E5E7EB;border-radius:999px;background:#fff;color:#6B7280;font-size:12px;font-weight:700;cursor:pointer}
 .filter-mode-btn.active{border-color:var(--primary);background:var(--primary-tint);color:var(--primary)}
@@ -567,20 +569,26 @@ input[type=number]{-moz-appearance:textfield}
           </div>
           <div class="filter-row">
             <input type="hidden" id="filter-type">
+            <select class="filter-select filter-single-select" id="filter-type-single" onchange="setFilterSingleValue('filter-type',this.value)"></select>
             <button type="button" class="filter-multi-btn" id="filter-type-btn" onclick="openFilterMulti('filter-type')">全部分類</button>
             <input type="hidden" id="filter-method">
+            <select class="filter-select filter-single-select" id="filter-method-single" onchange="setFilterSingleValue('filter-method',this.value)"></select>
             <button type="button" class="filter-multi-btn" id="filter-method-btn" onclick="openFilterMulti('filter-method')">全部方式</button>
           </div>
           <div class="filter-row">
             <input type="hidden" id="filter-main">
+            <select class="filter-select filter-single-select" id="filter-main-single" onchange="setFilterSingleValue('filter-main',this.value)"></select>
             <button type="button" class="filter-multi-btn" id="filter-main-btn" onclick="openFilterMulti('filter-main')">全部類別</button>
             <input type="hidden" id="filter-sub">
+            <select class="filter-select filter-single-select" id="filter-sub-single" onchange="setFilterSingleValue('filter-sub',this.value)"></select>
             <button type="button" class="filter-multi-btn" id="filter-sub-btn" onclick="openFilterMulti('filter-sub')">全部子類別</button>
           </div>
           <div class="filter-row">
             <input type="hidden" id="filter-year">
+            <select class="filter-select filter-single-select" id="filter-year-single" onchange="setFilterSingleValue('filter-year',this.value)"></select>
             <button type="button" class="filter-multi-btn" id="filter-year-btn" onclick="openFilterMulti('filter-year')">全部年份</button>
             <input type="hidden" id="filter-month">
+            <select class="filter-select filter-single-select" id="filter-month-single" onchange="setFilterSingleValue('filter-month',this.value)"></select>
             <button type="button" class="filter-multi-btn" id="filter-month-btn" onclick="openFilterMulti('filter-month')">全部月份</button>
           </div>
           <div class="filter-row">
@@ -1592,11 +1600,13 @@ function setFilterMultiValues(id,values){
   const clean=[...new Set((values||[]).filter(Boolean).map(String))];
   el.value=clean.length?JSON.stringify(clean):'';
   renderFilterMultiButton(id);
+  renderFilterSingleSelect(id);
   if(id==='filter-main'){
     const valid=new Set(getFilterMultiOptions('filter-sub'));
     const nextSub=getFilterMultiValues('filter-sub').filter(v=>valid.has(v));
     document.getElementById('filter-sub').value=nextSub.length?JSON.stringify(nextSub):'';
     renderFilterMultiButton('filter-sub');
+    renderFilterSingleSelect('filter-sub');
   }
 }
 function filterValueLabel(id,value){
@@ -1617,11 +1627,46 @@ function renderFilterMultiButton(id){
 function renderAllFilterMultiButtons(){
   FILTER_MULTI_IDS.forEach(renderFilterMultiButton);
 }
+function renderFilterSingleSelect(id){
+  const select=document.getElementById(`${id}-single`);
+  if(!select) return;
+  const selected=getFilterMultiValues(id)[0]||'';
+  const placeholder=FILTER_MULTI_META[id]?.placeholder||'全部';
+  const opts=getFilterMultiOptions(id);
+  select.innerHTML='';
+  const blank=document.createElement('option');
+  blank.value='';
+  blank.textContent=placeholder;
+  select.appendChild(blank);
+  opts.forEach(value=>{
+    const op=document.createElement('option');
+    op.value=value;
+    op.textContent=filterValueLabel(id,value);
+    select.appendChild(op);
+  });
+  select.value=opts.includes(selected)?selected:'';
+}
+function renderAllFilterSingleSelects(){
+  FILTER_MULTI_IDS.forEach(renderFilterSingleSelect);
+}
+function setFilterSingleValue(id,value){
+  setFilterMultiValues(id,value?[value]:[]);
+  if(id==='filter-month'&&value&&!getFilterMultiValues('filter-year').length){
+    setFilterMultiValues('filter-year',[String(new Date().getFullYear())]);
+  }
+  if(id==='filter-year'||id==='filter-month'){
+    document.getElementById('filter-from').value='';
+    document.getElementById('filter-to').value='';
+  }
+  renderRecords();
+  updateClearBtn();
+}
 function renderFilterMultiModeButton(){
   const btn=document.getElementById('filter-multi-mode-btn');
   if(!btn) return;
   btn.classList.toggle('active',_filterMultiMode);
   btn.textContent=_filterMultiMode?'多選：開':'多選：關';
+  document.getElementById('filter-card')?.classList.toggle('multi-mode',_filterMultiMode);
 }
 function toggleFilterMultiMode(){
   _filterMultiMode=!_filterMultiMode;
@@ -1632,6 +1677,7 @@ function toggleFilterMultiMode(){
     });
   }
   renderFilterMultiModeButton();
+  renderAllFilterSingleSelects();
   renderFilterMultiChoices();
   renderRecords();
   updateClearBtn();
@@ -1643,6 +1689,7 @@ function populateFilterDropdowns(){
   document.getElementById('filter-to').value=state.to;
   renderFilterMultiModeButton();
   renderAllFilterMultiButtons();
+  renderAllFilterSingleSelects();
   updateClearBtn();
 }
 function getFilterState(){
@@ -4309,8 +4356,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.31';
+const APP_VERSION='friends-1.32';
 const CHANGELOG=[
+  {version:'friends-1.32',date:'2026-08-05',items:[
+    '記錄頁篩選單選模式改用原生下拉選單，多選開關打開後才顯示勾選清單',
+  ]},
   {version:'friends-1.31',date:'2026-08-05',items:[
     '記錄頁篩選預設改回單選，並新增「多選」開關，需要一次選多個條件時再開啟',
   ]},
