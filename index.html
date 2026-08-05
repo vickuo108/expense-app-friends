@@ -60,6 +60,13 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .filter-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .filter-row:last-child{margin-bottom:0}
 .filter-select{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#fff;appearance:none;-webkit-appearance:none}
+.filter-multi-btn{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#fff;color:#1A1A2E;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.filter-multi-btn.has-values{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+.filter-choice-list{display:flex;flex-direction:column;gap:8px;max-height:56vh;overflow-y:auto;margin:12px 0}
+.filter-choice-row{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;color:#374151;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
+.filter-choice-row.active{border-color:var(--primary);background:var(--primary-tint);color:var(--primary)}
+.filter-choice-check{width:18px;height:18px;border-radius:5px;border:1.5px solid #D1D5DB;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0}
+.filter-choice-row.active .filter-choice-check{background:var(--primary);border-color:var(--primary);color:#fff}
 .date-filter-pills{display:flex;gap:6px;margin-bottom:8px}
 .date-filter-pill{padding:6px 12px;border:1.5px solid #E5E7EB;border-radius:999px;background:#fff;cursor:pointer;font-size:12px;color:#6B7280;white-space:nowrap}
 .date-filter-pill:active{border-color:var(--primary);color:var(--primary);background:var(--primary-tint)}
@@ -436,6 +443,21 @@ input[type=number]{-moz-appearance:textfield}
   </div>
 </div>
 
+<!-- 記錄篩選多選 Modal -->
+<div class="overlay" id="filter-multi-overlay" onclick="if(event.target===this)closeFilterMulti()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="filter-multi-title">選擇篩選</div>
+      <button class="modal-close" onclick="closeFilterMulti()">✕</button>
+    </div>
+    <div class="filter-choice-list" id="filter-multi-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" type="button" onclick="clearActiveFilterMulti()">清空</button>
+      <button class="btn btn-primary" type="button" onclick="closeFilterMulti()">完成</button>
+    </div>
+  </div>
+</div>
+
 <div class="app">
 
   <div class="header">
@@ -538,16 +560,22 @@ input[type=number]{-moz-appearance:textfield}
         </div>
         <div class="filter-card" id="filter-card">
           <div class="filter-row">
-            <select class="filter-select" id="filter-type"><option value="">全部分類</option></select>
-            <select class="filter-select" id="filter-method"><option value="">全部方式</option></select>
+            <input type="hidden" id="filter-type">
+            <button type="button" class="filter-multi-btn" id="filter-type-btn" onclick="openFilterMulti('filter-type')">全部分類</button>
+            <input type="hidden" id="filter-method">
+            <button type="button" class="filter-multi-btn" id="filter-method-btn" onclick="openFilterMulti('filter-method')">全部方式</button>
           </div>
           <div class="filter-row">
-            <select class="filter-select" id="filter-main"><option value="">全部類別</option></select>
-            <select class="filter-select" id="filter-sub"><option value="">全部子類別</option></select>
+            <input type="hidden" id="filter-main">
+            <button type="button" class="filter-multi-btn" id="filter-main-btn" onclick="openFilterMulti('filter-main')">全部類別</button>
+            <input type="hidden" id="filter-sub">
+            <button type="button" class="filter-multi-btn" id="filter-sub-btn" onclick="openFilterMulti('filter-sub')">全部子類別</button>
           </div>
           <div class="filter-row">
-            <select class="filter-select" id="filter-year"><option value="">全部年份</option></select>
-            <select class="filter-select" id="filter-month"><option value="">全部月份</option></select>
+            <input type="hidden" id="filter-year">
+            <button type="button" class="filter-multi-btn" id="filter-year-btn" onclick="openFilterMulti('filter-year')">全部年份</button>
+            <input type="hidden" id="filter-month">
+            <button type="button" class="filter-multi-btn" id="filter-month-btn" onclick="openFilterMulti('filter-month')">全部月份</button>
           </div>
           <div class="filter-row">
             <input type="date" class="filter-select" id="filter-from" min="1000-01-01" max="9999-12-31" style="font-size:13px">
@@ -1463,36 +1491,100 @@ function filterSubOptions(main=''){
   return [...new Set(opts.filter(Boolean))];
 }
 
+const FILTER_MULTI_IDS=['filter-type','filter-method','filter-main','filter-sub','filter-year','filter-month'];
+const FILTER_MULTI_META={
+  'filter-type':{title:'選擇分類',placeholder:'全部分類'},
+  'filter-method':{title:'選擇方式',placeholder:'全部方式'},
+  'filter-main':{title:'選擇類別',placeholder:'全部類別'},
+  'filter-sub':{title:'選擇子類別',placeholder:'全部子類別'},
+  'filter-year':{title:'選擇年份',placeholder:'全部年份'},
+  'filter-month':{title:'選擇月份',placeholder:'全部月份'},
+};
+let _activeFilterMultiId='';
+
+function recordMainOptions(){
+  const cats=loadCats(); const income=loadIncome(); const plans=loadFinPlan();
+  return [...new Set([...Object.keys(cats),'固定支出','繳信用卡款','貸款',...plans.map(p=>p.name),...income].filter(Boolean))];
+}
+function recordYearOptions(){
+  const currentYear=String(new Date().getFullYear());
+  return [...new Set([currentYear,...loadRecords().map(r=>r.date?.slice(0,4)).filter(Boolean)])]
+    .filter(y=>/^\d{4}$/.test(y))
+    .sort((a,b)=>b.localeCompare(a));
+}
+function recordMonthOptions(){
+  return Array.from({length:12},(_,i)=>String(i+1).padStart(2,'0'));
+}
+function getFilterMultiOptions(id){
+  if(id==='filter-type') return DEFAULT_TYPES;
+  if(id==='filter-method') return loadMethods();
+  if(id==='filter-main') return recordMainOptions();
+  if(id==='filter-sub'){
+    const mains=getFilterMultiValues('filter-main');
+    const opts=mains.length?mains.flatMap(m=>filterSubOptions(m)):filterSubOptions('');
+    return [...new Set(opts.filter(Boolean))];
+  }
+  if(id==='filter-year') return recordYearOptions();
+  if(id==='filter-month') return recordMonthOptions();
+  return [];
+}
+function getFilterMultiValues(id){
+  const raw=document.getElementById(id)?.value||'';
+  if(!raw) return [];
+  try{
+    const parsed=JSON.parse(raw);
+    return Array.isArray(parsed)?parsed.filter(Boolean):[];
+  }catch{
+    return raw?[raw]:[];
+  }
+}
+function setFilterMultiValues(id,values){
+  const el=document.getElementById(id);
+  if(!el) return;
+  const clean=[...new Set((values||[]).filter(Boolean).map(String))];
+  el.value=clean.length?JSON.stringify(clean):'';
+  renderFilterMultiButton(id);
+  if(id==='filter-main'){
+    const valid=new Set(getFilterMultiOptions('filter-sub'));
+    const nextSub=getFilterMultiValues('filter-sub').filter(v=>valid.has(v));
+    document.getElementById('filter-sub').value=nextSub.length?JSON.stringify(nextSub):'';
+    renderFilterMultiButton('filter-sub');
+  }
+}
+function filterValueLabel(id,value){
+  if(id==='filter-year') return `${value} 年`;
+  if(id==='filter-month') return `${parseInt(value,10)} 月`;
+  return value;
+}
+function renderFilterMultiButton(id){
+  const btn=document.getElementById(`${id}-btn`);
+  if(!btn) return;
+  const values=getFilterMultiValues(id);
+  const placeholder=FILTER_MULTI_META[id]?.placeholder||'全部';
+  btn.classList.toggle('has-values',values.length>0);
+  if(!values.length) btn.textContent=placeholder;
+  else if(values.length===1) btn.textContent=filterValueLabel(id,values[0]);
+  else btn.textContent=`${filterValueLabel(id,values[0])} +${values.length-1}`;
+}
+function renderAllFilterMultiButtons(){
+  FILTER_MULTI_IDS.forEach(renderFilterMultiButton);
+}
 function populateFilterDropdowns(){
-  const cats=loadCats(); const income=loadIncome(); const methods=loadMethods();
-  const mainEl=document.getElementById('filter-main');
-  const subEl=document.getElementById('filter-sub');
   const state=getFilterState();
-  fillSelect(document.getElementById('filter-type'), DEFAULT_TYPES, '全部分類');
-  fillSelect(document.getElementById('filter-method'), methods, '全部方式');
-  // build flat main list for filter
-  const plans=loadFinPlan();
-  const allMain=[...Object.keys(cats),'固定支出','繳信用卡款','貸款',...plans.map(p=>p.name),...income];
-  fillSelect(mainEl, allMain, '全部類別');
-  restoreSelectValue(mainEl,state.main);
-  fillSelect(subEl, filterSubOptions(mainEl.value), '全部子類別');
-  restoreSelectValue(subEl,state.sub);
-  restoreSelectValue(document.getElementById('filter-type'),state.type);
-  restoreSelectValue(document.getElementById('filter-method'),state.method);
+  FILTER_MULTI_IDS.forEach(id=>setFilterMultiValues(id,state[id.replace('filter-','')]||[]));
   document.getElementById('filter-from').value=state.from;
   document.getElementById('filter-to').value=state.to;
-  populateRecordYearMonthFilters();
-  syncRecordYearMonthFilters();
+  renderAllFilterMultiButtons();
   updateClearBtn();
 }
 function getFilterState(){
   return {
-    type:document.getElementById('filter-type')?.value||'',
-    method:document.getElementById('filter-method')?.value||'',
-    main:document.getElementById('filter-main')?.value||'',
-    sub:document.getElementById('filter-sub')?.value||'',
-    year:document.getElementById('filter-year')?.value||'',
-    month:document.getElementById('filter-month')?.value||'',
+    type:getFilterMultiValues('filter-type'),
+    method:getFilterMultiValues('filter-method'),
+    main:getFilterMultiValues('filter-main'),
+    sub:getFilterMultiValues('filter-sub'),
+    year:getFilterMultiValues('filter-year'),
+    month:getFilterMultiValues('filter-month'),
     from:document.getElementById('filter-from')?.value||'',
     to:document.getElementById('filter-to')?.value||'',
   };
@@ -1502,58 +1594,94 @@ function restoreSelectValue(el,value){
   if([...el.options].some(op=>op.value===value)) el.value=value;
 }
 function populateRecordYearMonthFilters(){
-  const yearEl=document.getElementById('filter-year');
-  const monthEl=document.getElementById('filter-month');
-  if(!yearEl||!monthEl) return;
-  const state=getFilterState();
-  const currentYear=String(new Date().getFullYear());
-  const years=[...new Set([currentYear,...loadRecords().map(r=>r.date?.slice(0,4)).filter(Boolean)])]
-    .filter(y=>/^\d{4}$/.test(y))
-    .sort((a,b)=>b.localeCompare(a));
-  yearEl.innerHTML='<option value="">全部年份</option>'+years.map(y=>`<option value="${y}">${y} 年</option>`).join('');
-  monthEl.innerHTML='<option value="">全部月份</option>'+Array.from({length:12},(_,i)=>`<option value="${String(i+1).padStart(2,'0')}">${i+1} 月</option>`).join('');
-  restoreSelectValue(yearEl,state.year);
-  restoreSelectValue(monthEl,state.month);
+  renderFilterMultiButton('filter-year');
+  renderFilterMultiButton('filter-month');
 }
 function syncRecordYearMonthFilters(){
-  const yearEl=document.getElementById('filter-year');
-  const monthEl=document.getElementById('filter-month');
   const from=document.getElementById('filter-from')?.value||'';
   const to=document.getElementById('filter-to')?.value||'';
-  if(!yearEl||!monthEl) return;
-  yearEl.value=''; monthEl.value='';
+  setFilterMultiValues('filter-year',[]);
+  setFilterMultiValues('filter-month',[]);
   if(!from||!to) return;
   const y=from.slice(0,4);
   const m=from.slice(5,7);
   const yearStart=`${y}-01-01`, yearEnd=`${y}-12-31`;
   const monthEnd=dateInputStr(new Date(Number(y),Number(m),0));
   if(from===`${y}-${m}-01`&&to===monthEnd){
-    restoreSelectValue(yearEl,y);
-    restoreSelectValue(monthEl,m);
+    setFilterMultiValues('filter-year',[y]);
+    setFilterMultiValues('filter-month',[m]);
   } else if(from===yearStart&&to===yearEnd){
-    restoreSelectValue(yearEl,y);
+    setFilterMultiValues('filter-year',[y]);
   }
 }
 function applyRecordYearMonthFilter(){
-  const yearEl=document.getElementById('filter-year');
-  const monthEl=document.getElementById('filter-month');
-  let year=yearEl.value;
-  const month=monthEl.value;
-  if(month&&!year){
-    year=String(new Date().getFullYear());
-    restoreSelectValue(yearEl,year);
+  document.getElementById('filter-from').value='';
+  document.getElementById('filter-to').value='';
+  renderRecords(); updateClearBtn();
+}
+function openFilterMulti(id){
+  _activeFilterMultiId=id;
+  document.getElementById('filter-multi-title').textContent=FILTER_MULTI_META[id]?.title||'選擇篩選';
+  renderFilterMultiChoices();
+  document.getElementById('filter-multi-overlay').classList.add('open');
+}
+function renderFilterMultiChoices(){
+  const list=document.getElementById('filter-multi-list');
+  const id=_activeFilterMultiId;
+  if(!list||!id) return;
+  const values=new Set(getFilterMultiValues(id));
+  const opts=getFilterMultiOptions(id);
+  list.innerHTML='';
+  if(!opts.length){
+    const empty=document.createElement('div');
+    empty.style.cssText='font-size:13px;color:#9BA3AF;text-align:center;padding:20px 0';
+    empty.textContent='目前沒有可選項目';
+    list.appendChild(empty);
+    return;
   }
-  if(!year){
+  opts.forEach(opt=>{
+    const active=values.has(opt);
+    const btn=document.createElement('button');
+    btn.type='button';
+    btn.className=`filter-choice-row${active?' active':''}`;
+    btn.onclick=()=>toggleFilterMultiValue(opt);
+    const check=document.createElement('span');
+    check.className='filter-choice-check';
+    check.textContent=active?'✓':'';
+    const label=document.createElement('span');
+    label.textContent=filterValueLabel(id,opt);
+    btn.append(check,label);
+    list.appendChild(btn);
+  });
+}
+function toggleFilterMultiValue(value){
+  const id=_activeFilterMultiId;
+  const values=getFilterMultiValues(id);
+  const next=values.includes(value)?values.filter(v=>v!==value):[...values,value];
+  setFilterMultiValues(id,next);
+  if(id==='filter-month'&&next.length&&!getFilterMultiValues('filter-year').length){
+    setFilterMultiValues('filter-year',[String(new Date().getFullYear())]);
+  }
+  if(id==='filter-year'||id==='filter-month'){
     document.getElementById('filter-from').value='';
     document.getElementById('filter-to').value='';
-  } else if(month){
-    document.getElementById('filter-from').value=`${year}-${month}-01`;
-    document.getElementById('filter-to').value=dateInputStr(new Date(Number(year),Number(month),0));
-  } else {
-    document.getElementById('filter-from').value=`${year}-01-01`;
-    document.getElementById('filter-to').value=`${year}-12-31`;
   }
+  renderFilterMultiChoices();
   renderRecords(); updateClearBtn();
+}
+function clearActiveFilterMulti(){
+  if(!_activeFilterMultiId) return;
+  setFilterMultiValues(_activeFilterMultiId,[]);
+  if(_activeFilterMultiId==='filter-year'||_activeFilterMultiId==='filter-month'){
+    document.getElementById('filter-from').value='';
+    document.getElementById('filter-to').value='';
+  }
+  renderFilterMultiChoices();
+  renderRecords(); updateClearBtn();
+}
+function closeFilterMulti(){
+  document.getElementById('filter-multi-overlay').classList.remove('open');
+  _activeFilterMultiId='';
 }
 
 // ─── Tab ───────────────────────────────────────────────────────────────────
@@ -1768,16 +1896,9 @@ function resetAddForm(lastRec=null){
 
 // ─── Records ───────────────────────────────────────────────────────────────
 function initSearchListeners(){
-  ['search-input','filter-type','filter-method','filter-sub']
-    .forEach(id=>document.getElementById(id).addEventListener(id==='search-input'?'input':'change',()=>{ renderRecords(); updateClearBtn(); }));
+  document.getElementById('search-input').addEventListener('input',()=>{ renderRecords(); updateClearBtn(); });
   ['filter-from','filter-to']
     .forEach(id=>document.getElementById(id).addEventListener('change',()=>{ syncRecordYearMonthFilters(); renderRecords(); updateClearBtn(); }));
-  ['filter-year','filter-month']
-    .forEach(id=>document.getElementById(id).addEventListener('change',applyRecordYearMonthFilter));
-  document.getElementById('filter-main').addEventListener('change',()=>{
-    fillSelect(document.getElementById('filter-sub'), filterSubOptions(document.getElementById('filter-main').value), '全部子類別');
-    renderRecords(); updateClearBtn();
-  });
   document.getElementById('filter-toggle').addEventListener('click',()=>{
     const fc=document.getElementById('filter-card'), btn=document.getElementById('filter-toggle');
     fc.classList.toggle('open'); btn.classList.toggle('active');
@@ -1803,29 +1924,34 @@ function updateClearBtn(){
 }
 function hasActiveRecordFilters(){
   return document.getElementById('search-input').value.trim()||
-    ['filter-type','filter-method','filter-main','filter-sub'].some(id=>document.getElementById(id).value)||
+    FILTER_MULTI_IDS.some(id=>getFilterMultiValues(id).length)||
     document.getElementById('filter-from').value||document.getElementById('filter-to').value;
 }
 function clearFilters(){
   document.getElementById('search-input').value='';
-  ['filter-type','filter-method','filter-main','filter-sub','filter-year','filter-month','filter-from','filter-to'].forEach(id=>{ document.getElementById(id).value=''; });
+  FILTER_MULTI_IDS.forEach(id=>setFilterMultiValues(id,[]));
+  ['filter-from','filter-to'].forEach(id=>{ document.getElementById(id).value=''; });
   updateClearBtn(); renderRecords();
 }
 
 function applyFilters(data){
   const q=document.getElementById('search-input').value.toLowerCase();
-  const ft=document.getElementById('filter-type').value;
-  const fm=document.getElementById('filter-method').value;
-  const fmain=document.getElementById('filter-main').value;
-  const fsub=document.getElementById('filter-sub').value;
+  const ft=getFilterMultiValues('filter-type');
+  const fm=getFilterMultiValues('filter-method');
+  const fmain=getFilterMultiValues('filter-main');
+  const fsub=getFilterMultiValues('filter-sub');
+  const fyear=getFilterMultiValues('filter-year');
+  const fmonth=getFilterMultiValues('filter-month');
   const ffrom=document.getElementById('filter-from').value;
   const fto=document.getElementById('filter-to').value;
   return data.filter(r=>{
     if(q&&!`${r.main}${r.sub}${r.note}${r.method}${r.type}${r.amount}`.toLowerCase().includes(q)) return false;
-    if(ft&&r.type!==ft) return false;
-    if(fm&&r.method!==fm) return false;
-    if(fmain&&r.main!==fmain) return false;
-    if(fsub&&r.sub!==fsub) return false;
+    if(ft.length&&!ft.includes(r.type)) return false;
+    if(fm.length&&!fm.includes(r.method)) return false;
+    if(fmain.length&&!fmain.includes(r.main)) return false;
+    if(fsub.length&&!fsub.includes(r.sub)) return false;
+    if(fyear.length&&!fyear.includes((r.date||'').slice(0,4))) return false;
+    if(fmonth.length&&!fmonth.includes((r.date||'').slice(5,7))) return false;
     if(ffrom&&r.date<ffrom) return false;
     if(fto&&r.date>fto) return false;
     return true;
@@ -2989,7 +3115,8 @@ function renderCCSection(data, prefix){
     const allRefunds=data.filter(r=>untilMonth(r)&&r.method===name&&r.type!=='清償負債'&&r.amount>0).reduce((s,r)=>s+r.amount,0);
     const allPayments=data.filter(r=>untilMonth(r)&&isPayment(r,name)).reduce((s,r)=>s+Math.abs(r.amount),0);
     const outstanding=openOut+allCharges-allPayments-allRefunds;
-    tCharge+=charge; tPay+=payment; if(outstanding>0) tOut+=outstanding;
+    const outHtml=outstanding===0?'-':`<span class="${outstanding<0?'clr-expense':''}">${fmt(outstanding)}</span>`;
+    tCharge+=charge; tPay+=payment; tOut+=outstanding;
     const lastPay=data.filter(r=>r.date&&r.date.startsWith(prefix)&&isPayment(r,name)).sort((a,b)=>b.date.localeCompare(a.date))[0];
     const dueStr=lastPay?lastPay.date.slice(5).replace('-','/'):'';
     // 分期記錄（所有月份，此卡，有 installments，且尚未付清）
@@ -3033,12 +3160,13 @@ function renderCCSection(data, prefix){
       <td>${name}${hasInstall?` <span style="font-size:10px;color:#7C3AED">▶ 分期</span>`:''}</td>
       <td>${charge?`<span class="clr-expense">${fmt(charge)}</span>`:'-'}</td>
       <td>${payment?`<span class="clr-expense">${fmt(payment)}</span>`:'-'}</td>
-      <td>${outstanding>0?fmt(outstanding):'-'}</td>
+      <td>${outHtml}</td>
       <td class="note-cell">${dueStr}</td>
     </tr>${installDetail}`;
   }).join('');
-  const rate=totalLimit>0?Math.round(tOut/totalLimit*100)+'%':'-';
-  const total=`<tr class="total-row"><td>信用卡合計</td><td><span class="clr-expense">${fmt(tCharge)||'-'}</span></td><td><span class="clr-expense">${fmt(tPay)||'-'}</span></td><td>${fmt(tOut)}</td><td class="note-cell">使用率 ${rate}</td></tr>`;
+  const rate=totalLimit>0?Math.round(Math.max(tOut,0)/totalLimit*100)+'%':'-';
+  const totalOutHtml=tOut===0?'-':`<span class="${tOut<0?'clr-expense':''}">${fmt(tOut)}</span>`;
+  const total=`<tr class="total-row"><td>信用卡合計</td><td><span class="clr-expense">${fmt(tCharge)||'-'}</span></td><td><span class="clr-expense">${fmt(tPay)||'-'}</span></td><td>${totalOutHtml}</td><td class="note-cell">使用率 ${rate}</td></tr>`;
   document.getElementById('cc-table-body').innerHTML=rows+total;
 }
 
@@ -4120,8 +4248,15 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.27';
+const APP_VERSION='friends-1.29';
 const CHANGELOG=[
+  {version:'friends-1.29',date:'2026-08-05',items:[
+    '記錄頁篩選改為可多選，分類、方式、類別、子類別、年份與月份都可一次選多個',
+    '修正信用卡區尚待繳清超繳時被顯示為空白，現在會正確顯示負數',
+  ]},
+  {version:'friends-1.28',date:'2026-08-05',items:[
+    '記錄頁篩選改為可多選，分類、方式、類別、子類別、年份與月份都可一次選多個',
+  ]},
   {version:'friends-1.27',date:'2026-07-21',items:[
     '統計頁月份標題可直接開啟年月選擇器，快速切換到指定月份',
   ]},
