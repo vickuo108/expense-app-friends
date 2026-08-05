@@ -62,6 +62,9 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .filter-select{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#fff;appearance:none;-webkit-appearance:none}
 .filter-multi-btn{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;font-size:13px;background:#fff;color:#1A1A2E;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .filter-multi-btn.has-values{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary)}
+.filter-mode-row{display:flex;justify-content:flex-end;margin-bottom:8px}
+.filter-mode-btn{padding:6px 12px;border:1.5px solid #E5E7EB;border-radius:999px;background:#fff;color:#6B7280;font-size:12px;font-weight:700;cursor:pointer}
+.filter-mode-btn.active{border-color:var(--primary);background:var(--primary-tint);color:var(--primary)}
 .filter-choice-list{display:flex;flex-direction:column;gap:8px;max-height:56vh;overflow-y:auto;margin:12px 0}
 .filter-choice-row{display:flex;align-items:center;gap:10px;width:100%;padding:11px 12px;border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;color:#374151;font-size:14px;font-weight:600;text-align:left;cursor:pointer}
 .filter-choice-row.active{border-color:var(--primary);background:var(--primary-tint);color:var(--primary)}
@@ -559,6 +562,9 @@ input[type=number]{-moz-appearance:textfield}
           <button class="filter-toggle" id="filter-toggle">篩選</button>
         </div>
         <div class="filter-card" id="filter-card">
+          <div class="filter-mode-row">
+            <button type="button" class="filter-mode-btn" id="filter-multi-mode-btn" onclick="toggleFilterMultiMode()">多選：關</button>
+          </div>
           <div class="filter-row">
             <input type="hidden" id="filter-type">
             <button type="button" class="filter-multi-btn" id="filter-type-btn" onclick="openFilterMulti('filter-type')">全部分類</button>
@@ -1468,8 +1474,49 @@ function populateAddForm(){
 function populateEditForm(){
   fillSelect(document.getElementById('e-type'), DEFAULT_TYPES);
   fillMethodSelect(document.getElementById('e-method'));
-  fillMainSelect(document.getElementById('e-main'));
-  fillSelect(document.getElementById('e-sub'), [], '（選填）');
+  fillEditMainSelect(document.getElementById('e-main'));
+  fillEditSubSelect(document.getElementById('e-sub'));
+}
+
+function ensureSelectOption(el,value){
+  if(!el||!value||[...el.options].some(op=>op.value===value)) return;
+  const op=document.createElement('option');
+  op.value=value;
+  op.textContent=value;
+  el.appendChild(op);
+}
+
+function appendEditOption(group,value,seen){
+  if(!value||seen.has(value)) return;
+  seen.add(value);
+  const op=document.createElement('option');
+  op.value=value;
+  op.textContent=value;
+  group.appendChild(op);
+}
+
+function fillEditMainSelect(el){
+  el.innerHTML='<option value="">（選填）</option>';
+  const cats=loadCats(); const income=loadIncome(); const plans=loadFinPlan();
+  const seen=new Set();
+  const addGroup=(label,items)=>{
+    const g=document.createElement('optgroup');
+    g.label=label;
+    items.forEach(v=>appendEditOption(g,v,seen));
+    if(g.children.length) el.appendChild(g);
+  };
+  addGroup('浮動支出',Object.keys(cats));
+  addGroup('固定 / 信用卡 / 貸款',['固定支出','繳信用卡款','貸款']);
+  addGroup('財務規劃',plans.map(p=>p.name));
+  addGroup('收入',income);
+  addGroup('銀行帳戶操作',['提款','轉帳','現金存入','手續費','奉獻']);
+  addGroup('電子錢包操作',['加值']);
+}
+
+function fillEditSubSelect(el){
+  const mg=loadMG();
+  const opts=[...filterSubOptions(''),...(mg['現金']||[])];
+  fillSelect(el,[...new Set(opts.filter(Boolean))],'（選填）');
 }
 
 function filterSubOptions(main=''){
@@ -1501,6 +1548,7 @@ const FILTER_MULTI_META={
   'filter-month':{title:'選擇月份',placeholder:'全部月份'},
 };
 let _activeFilterMultiId='';
+let _filterMultiMode=false;
 
 function recordMainOptions(){
   const cats=loadCats(); const income=loadIncome(); const plans=loadFinPlan();
@@ -1569,11 +1617,31 @@ function renderFilterMultiButton(id){
 function renderAllFilterMultiButtons(){
   FILTER_MULTI_IDS.forEach(renderFilterMultiButton);
 }
+function renderFilterMultiModeButton(){
+  const btn=document.getElementById('filter-multi-mode-btn');
+  if(!btn) return;
+  btn.classList.toggle('active',_filterMultiMode);
+  btn.textContent=_filterMultiMode?'多選：開':'多選：關';
+}
+function toggleFilterMultiMode(){
+  _filterMultiMode=!_filterMultiMode;
+  if(!_filterMultiMode){
+    FILTER_MULTI_IDS.forEach(id=>{
+      const values=getFilterMultiValues(id);
+      if(values.length>1) setFilterMultiValues(id,[values[0]]);
+    });
+  }
+  renderFilterMultiModeButton();
+  renderFilterMultiChoices();
+  renderRecords();
+  updateClearBtn();
+}
 function populateFilterDropdowns(){
   const state=getFilterState();
   FILTER_MULTI_IDS.forEach(id=>setFilterMultiValues(id,state[id.replace('filter-','')]||[]));
   document.getElementById('filter-from').value=state.from;
   document.getElementById('filter-to').value=state.to;
+  renderFilterMultiModeButton();
   renderAllFilterMultiButtons();
   updateClearBtn();
 }
@@ -1657,7 +1725,9 @@ function renderFilterMultiChoices(){
 function toggleFilterMultiValue(value){
   const id=_activeFilterMultiId;
   const values=getFilterMultiValues(id);
-  const next=values.includes(value)?values.filter(v=>v!==value):[...values,value];
+  const next=_filterMultiMode
+    ? (values.includes(value)?values.filter(v=>v!==value):[...values,value])
+    : (values.includes(value)?[]:[value]);
   setFilterMultiValues(id,next);
   if(id==='filter-month'&&next.length&&!getFilterMultiValues('filter-year').length){
     setFilterMultiValues('filter-year',[String(new Date().getFullYear())]);
@@ -1668,6 +1738,7 @@ function toggleFilterMultiValue(value){
   }
   renderFilterMultiChoices();
   renderRecords(); updateClearBtn();
+  if(!_filterMultiMode) closeFilterMulti();
 }
 function clearActiveFilterMulti(){
   if(!_activeFilterMultiId) return;
@@ -2150,28 +2221,15 @@ function copyRecord(id){
 // ─── Edit Modal ────────────────────────────────────────────────────────────
 function initEditListeners(){
   const mainEl=document.getElementById('e-main');
-  const subEl=document.getElementById('e-sub');
   const lpEl=document.getElementById('e-loan-p');
   mainEl.addEventListener('change',()=>{
-    updateSubByMain(mainEl.value,subEl);
     document.getElementById('e-loan-extra').style.display=mainEl.value==='貸款'?'block':'none';
   });
   document.getElementById('e-method').addEventListener('change',()=>{
     const methodVal=document.getElementById('e-method').value;
-    const typeVal=document.getElementById('e-type').value;
-    const curMain=mainEl.value;
-    fillMainSelect(mainEl, methodVal, true, typeVal);
-    mainEl.value=curMain;
-    updateSubByMain(mainEl.value, subEl);
     const isCC=isCCMethod(methodVal);
     document.getElementById('e-install-extra').style.display=isCC?'block':'none';
     if(!isCC) resetInstall('e');
-  });
-  document.getElementById('e-type').addEventListener('change',()=>{
-    const typeVal=document.getElementById('e-type').value;
-    fillMethodSelect(document.getElementById('e-method'), typeVal);
-    fillMainSelect(mainEl, '', true, typeVal);
-    fillSelect(subEl, [], '（選填）');
   });
   lpEl.addEventListener('input',calcLoanInterest.bind(null,'e'));
   document.getElementById('e-amount').addEventListener('input',calcLoanInterest.bind(null,'e'));
@@ -2193,11 +2251,14 @@ function openEdit(id){
   populateEditForm();
   document.getElementById('e-date').value=r.date;
   document.getElementById('e-type').value=r.type;
-  fillMethodSelect(document.getElementById('e-method'), r.type||'');
+  fillMethodSelect(document.getElementById('e-method'));
+  ensureSelectOption(document.getElementById('e-method'),r.method);
   document.getElementById('e-method').value=r.method;
-  fillMainSelect(document.getElementById('e-main'), r.method||'', true, r.type||'');
+  fillEditMainSelect(document.getElementById('e-main'));
+  ensureSelectOption(document.getElementById('e-main'),r.main||'');
   document.getElementById('e-main').value=r.main||'';
-  updateSubByMain(r.main||'', document.getElementById('e-sub'));
+  fillEditSubSelect(document.getElementById('e-sub'));
+  ensureSelectOption(document.getElementById('e-sub'),r.sub||'');
   document.getElementById('e-sub').value=r.sub||'';
   document.getElementById('e-amount').value=fmtInput(r.amount);
   document.getElementById('e-note').value=r.note||'';
@@ -4248,8 +4309,14 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.29';
+const APP_VERSION='friends-1.31';
 const CHANGELOG=[
+  {version:'friends-1.31',date:'2026-08-05',items:[
+    '記錄頁篩選預設改回單選，並新增「多選」開關，需要一次選多個條件時再開啟',
+  ]},
+  {version:'friends-1.30',date:'2026-08-05',items:[
+    '編輯記帳時各欄位改為獨立修改，變更主類別、付款方式或分類不會再自動清空其他欄位',
+  ]},
   {version:'friends-1.29',date:'2026-08-05',items:[
     '記錄頁篩選改為可多選，分類、方式、類別、子類別、年份與月份都可一次選多個',
     '修正信用卡區尚待繳清超繳時被顯示為空白，現在會正確顯示負數',
