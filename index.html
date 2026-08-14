@@ -180,9 +180,38 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .report-table .rep-net td{background:#EFF6FF;font-weight:700;color:#1D4ED8;border-top:2px solid #BFDBFE}
 .rep-view-toggle{display:flex;gap:6px;margin-bottom:0}
 #panel-report.active{display:flex!important;flex-direction:column}
-#rep-view-year,#rep-view-qm{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;min-height:0}
+#rep-view-year,#rep-view-qm,#rep-view-cc{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;min-height:0}
 .rep-view-btn{flex:1;padding:7px 0;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-size:12px;cursor:pointer;font-weight:600;color:#374151}
 .rep-view-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.cc-report-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.cc-report-select{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;background:#fff;font-size:13px;color:#1A1A2E}
+.cc-report-card-nav{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;margin-bottom:10px}
+.cc-report-card-nav::-webkit-scrollbar{display:none}
+.cc-report-card-btn{flex-shrink:0;padding:7px 11px;border:1.5px solid #E5E7EB;border-radius:999px;background:#fff;font-size:12px;font-weight:700;color:#374151;cursor:pointer}
+.cc-report-card-btn.has-amount{border-color:var(--primary);color:var(--primary-deep);background:var(--primary-tint)}
+.cc-report-summary{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
+.cc-report-box{background:#fff;border-radius:12px;padding:12px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.cc-report-box-label{font-size:11px;color:#9BA3AF;font-weight:700;margin-bottom:4px}
+.cc-report-box-val{font-size:17px;font-weight:800;color:#1A1A2E}
+.cc-report-section{background:#fff;border-radius:14px;padding:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.cc-report-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:8px}
+.cc-report-title{font-size:14px;font-weight:800;color:#1A1A2E;margin-bottom:8px}
+.cc-report-card-meta{font-size:11px;color:#9BA3AF;text-align:right;white-space:nowrap}
+.cc-report-table{width:100%;border-collapse:collapse;font-size:12px}
+.cc-report-table th,.cc-report-table td{padding:7px 5px;border-bottom:1px solid #F3F4F6;text-align:right;white-space:nowrap}
+.cc-report-table th{background:#F8FAFC;font-weight:700;color:#374151;border-bottom:2px solid #E5E7EB}
+.cc-report-table th:first-child,.cc-report-table td:first-child{text-align:left}
+.cc-report-table td:first-child{font-weight:700;color:#374151}
+.cc-report-detail{min-width:0;table-layout:fixed}
+.cc-report-detail th,.cc-report-detail td{white-space:normal;word-break:break-word;line-height:1.35}
+.cc-report-detail th:nth-child(1),.cc-report-detail td:nth-child(1){width:44px}
+.cc-report-detail th:nth-child(2),.cc-report-detail td:nth-child(2){width:84px;text-align:left}
+.cc-report-detail th:nth-child(3),.cc-report-detail td:nth-child(3){width:74px;text-align:left}
+.cc-report-detail th:nth-child(4),.cc-report-detail td:nth-child(4){width:70px;padding-right:12px}
+.cc-report-detail th:nth-child(5),.cc-report-detail td:nth-child(5){text-align:left;padding-left:10px;white-space:nowrap;word-break:normal;overflow:hidden;text-overflow:ellipsis}
+.cc-report-detail-wrap{display:none;margin-top:10px}
+.cc-report-detail-wrap.open{display:block}
+.cc-report-empty{text-align:center;padding:28px 8px;color:#9BA3AF;font-size:13px}
 .qm-table{border-collapse:collapse;font-size:11px;min-width:720px;width:100%}
 .qm-table th,.qm-table td{padding:5px 7px;border-bottom:1px solid #F3F4F6;text-align:right;white-space:nowrap}
 .qm-table tbody td:first-child{text-align:left;position:sticky;left:0;background:#fff;z-index:2;min-width:40px;font-weight:600}
@@ -882,13 +911,14 @@ input[type=number]{-moz-appearance:textfield}
         <div class="rep-view-toggle">
           <button class="rep-view-btn active" onclick="setRepView('year',this)">年度報表</button>
           <button class="rep-view-btn" onclick="setRepView('qm',this)">季&amp;月報表</button>
+          <button class="rep-view-btn" onclick="setRepView('cc',this)">信用卡報表</button>
         </div>
         <div id="rep-month-selector" style="display:flex;gap:6px;overflow-x:auto;padding:6px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none"></div>
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
           <div id="rep-copy-btn-wrap" style="display:none">
             <button onclick="copyLastMonthBudget()" style="padding:7px 14px;border:1.5px solid #CBD5E1;border-radius:8px;background:#fff;font-size:12px;color:#374151;cursor:pointer">📋 帶入上月預估</button>
           </div>
-          <button onclick="exportReportPDF()" style="padding:7px 14px;border:1.5px solid var(--primary);border-radius:8px;background:#fff;font-size:12px;color:var(--primary-deep);cursor:pointer;font-weight:600">📄 匯出 PDF</button>
+          <button id="rep-pdf-btn" onclick="exportReportPDF()" style="padding:7px 14px;border:1.5px solid var(--primary);border-radius:8px;background:#fff;font-size:12px;color:var(--primary-deep);cursor:pointer;font-weight:600">📄 匯出 PDF</button>
         </div>
       </div>
       <!-- 年度報表 -->
@@ -920,6 +950,12 @@ input[type=number]{-moz-appearance:textfield}
           </thead>
           <tbody id="qm-tbody"></tbody>
         </table>
+      </div>
+      <!-- 信用卡報表 -->
+      <div id="rep-view-cc" style="display:none">
+        <div class="cc-report-card-nav" id="cc-report-card-nav"></div>
+        <div class="cc-report-summary" id="cc-report-summary"></div>
+        <div id="cc-report-card-list"></div>
       </div>
     </div>
   </div>
@@ -1858,7 +1894,7 @@ function initFormListeners(){
       const ym=document.getElementById('f-date').value.slice(0,7);
       const budget=loadMonthBudget(ym)['fixed:'+subEl.value];
       if(budget){
-        amtEl.value=fmtInput(budget);
+        amtEl.value=fmtInput(-Math.abs(budget));
       } else {
         const item=loadFixed().find(f=>f.name===subEl.value);
         if(item&&item.amount) amtEl.value=fmtInput(-Math.abs(item.amount));
@@ -2450,6 +2486,7 @@ function initReportNav(){
   const sel=document.getElementById('rep-month-selector');
   const labels=['年度','1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
   sel.innerHTML=labels.map((l,i)=>`<button class="rep-month-btn${i===reportMonth?' active':''}" data-m="${i}" onclick="selectReportMonth(this)">${l}</button>`).join('');
+  populateCreditCardReportFilters();
 }
 
 function selectReportMonth(btn){
@@ -2466,8 +2503,10 @@ function setRepView(v, btn){
   if(btn) btn.classList.add('active');
   document.getElementById('rep-view-year').style.display=v==='year'?'':'none';
   document.getElementById('rep-view-qm').style.display=v==='qm'?'':'none';
-  document.getElementById('rep-month-selector').style.display=v==='year'?'flex':'none';
+  document.getElementById('rep-view-cc').style.display=v==='cc'?'':'none';
+  document.getElementById('rep-month-selector').style.display=(v==='year'||v==='cc')?'flex':'none';
   document.getElementById('rep-copy-btn-wrap').style.display=v==='year'&&reportMonth!==0?'block':'none';
+  document.getElementById('rep-pdf-btn').style.display=v==='cc'?'none':'inline-block';
   renderFinReport();
 }
 
@@ -2488,6 +2527,12 @@ function copyLastMonthBudget(){
 function renderFinReport(){
   document.getElementById('rep-year-label').textContent=`${reportYear} 年`;
   syncReportMonthButtons();
+  if(repView==='cc'){
+    document.getElementById('rep-copy-btn-wrap').style.display='none';
+    populateCreditCardReportFilters();
+    renderCreditCardReport();
+    return;
+  }
   if(repView==='qm'){
     document.getElementById('rep-copy-btn-wrap').style.display='none';
     renderQMReport();
@@ -2616,6 +2661,143 @@ function renderFinReport(){
   html+=`<tr class="rep-net"><td>淨利率</td><td>${netRateB}</td><td>${netRateA}</td>${'<td></td>'.repeat(isAnnual?4:3)}</tr>`;
 
   document.getElementById('report-tbody').innerHTML=html;
+}
+
+function populateCreditCardReportFilters(){
+  renderCreditCardReportNav([]);
+}
+function getCreditCardReportRecords(){
+  const cards=new Set(loadMG()['信用卡']||[]);
+  const pfx=reportMonth===0?`${reportYear}-`:`${reportYear}-${String(reportMonth).padStart(2,'0')}`;
+  return loadRecords()
+    .filter(r=>r.date&&r.date.startsWith(pfx))
+    .filter(r=>cards.has(r.method))
+    .filter(r=>r.type!=='清償負債'&&r.main!=='繳信用卡款'&&r.amount<0)
+    .sort((a,b)=>b.date.localeCompare(a.date));
+}
+function renderCreditCardReport(){
+  const rows=getCreditCardReportRecords();
+  renderCreditCardReportNav(rows);
+  const total=rows.reduce((s,r)=>s+Math.abs(r.amount),0);
+  const count=rows.length;
+  const byCard=sumCreditCardRows(rows,r=>r.method||'未命名信用卡');
+  const byMain=sumCreditCardRows(rows,r=>r.main||'未分類');
+  const topCard=byCard[0];
+  const topCat=byMain[0];
+  const scope=reportMonth===0?`${reportYear} 年`:`${reportYear} 年 ${reportMonth} 月`;
+  document.getElementById('cc-report-summary').innerHTML=[
+    ['期間',scope],
+    ['刷卡總額',`$${fmt(total)}`],
+    ['筆數',`${fmt(count)} 筆`],
+    ['最大分類',topCat?`${escHtml(topCat.label)} $${fmt(topCat.amount)}`:'−'],
+    ['最大信用卡',topCard?`${escHtml(topCard.label)} $${fmt(topCard.amount)}`:'−'],
+  ].map(([k,v])=>`<div class="cc-report-box"><div class="cc-report-box-label">${k}</div><div class="cc-report-box-val">${v}</div></div>`).join('');
+  renderCreditCardCardList(rows);
+}
+function sumCreditCardRows(rows,getKey){
+  const map={};
+  rows.forEach(r=>{
+    const key=getKey(r);
+    if(!map[key]) map[key]={label:key,amount:0,count:0};
+    map[key].amount+=Math.abs(r.amount);
+    map[key].count+=1;
+  });
+  return Object.values(map).sort((a,b)=>b.amount-a.amount||b.count-a.count||a.label.localeCompare(b.label,'zh-Hant'));
+}
+function sortedCreditCardsForReport(rows){
+  const cards=loadMG()['信用卡']||[];
+  const totals=Object.fromEntries(sumCreditCardRows(rows,r=>r.method||'未命名信用卡').map(x=>[x.label,x.amount]));
+  return cards
+    .map((card,idx)=>({card,idx,total:totals[card]||0}))
+    .sort((a,b)=>b.total-a.total||a.idx-b.idx);
+}
+function renderCreditCardReportNav(rows){
+  const nav=document.getElementById('cc-report-card-nav');
+  if(!nav) return;
+  const cards=sortedCreditCardsForReport(rows);
+  nav.innerHTML=cards.length
+    ?cards.map((x,i)=>`<button type="button" class="cc-report-card-btn${x.total?' has-amount':''}" onclick="scrollCreditCardReportTo(${i})">${escHtml(x.card)}</button>`).join('')
+    :'<div class="cc-report-empty" style="padding:10px 0">尚未設定信用卡</div>';
+}
+function scrollCreditCardReportTo(idx){
+  const el=document.getElementById(`cc-report-card-${idx}`);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function toggleCreditCardReportDetail(idx){
+  const el=document.getElementById(`cc-report-detail-${idx}`);
+  if(el) el.classList.toggle('open');
+}
+function renderCreditCardCardList(rows){
+  const cards=sortedCreditCardsForReport(rows).map(x=>x.card);
+  const byCard=Object.fromEntries(cards.map(card=>[card,rows.filter(r=>r.method===card)]));
+  document.getElementById('cc-report-card-list').innerHTML=cards.length
+    ?cards.map((card,i)=>renderCreditCardSection(card,byCard[card]||[],i)).join('')
+    :'<div class="cc-report-section"><div class="cc-report-empty">尚未設定信用卡</div></div>';
+}
+function renderCreditCardSection(card,rows,idx){
+  const total=rows.reduce((s,r)=>s+Math.abs(r.amount),0);
+  const top=sumCreditCardRows(rows,r=>r.main||'未分類')[0];
+  const monthly=reportMonth===0?renderCreditCardMonthTable(rows):'';
+  const mainTable=renderCreditCardMainTable(rows,total);
+  const detail=renderCreditCardDetailTable(rows,idx);
+  return `<div class="cc-report-section" id="cc-report-card-${idx}">
+    <div class="cc-report-card-head" onclick="toggleCreditCardReportDetail(${idx})">
+      <div>
+        <div class="cc-report-title" style="margin-bottom:2px">${escHtml(card)}</div>
+        <div style="font-size:11px;color:#9BA3AF">點選卡片展開 / 收合刷卡明細</div>
+      </div>
+      <div class="cc-report-card-meta">
+        <div class="${total?'clr-expense':''}" style="font-size:15px;font-weight:800">$${fmt(total)}</div>
+        <div>${fmt(rows.length)} 筆${top?` · ${escHtml(top.label)}`:''}</div>
+      </div>
+    </div>
+    ${monthly}
+    <div class="cc-report-title">主類別統計</div>
+    ${mainTable}
+    ${detail}
+  </div>`;
+}
+function renderCreditCardMonthTable(rows){
+  const byMonth=sumCreditCardRows(rows,r=>r.date.slice(0,7)).sort((a,b)=>a.label.localeCompare(b.label));
+  return `<div class="cc-report-title">每月刷卡</div>
+    <table class="cc-report-table">
+      <thead><tr><th>月份</th><th>金額</th><th>筆數</th></tr></thead>
+      <tbody>${byMonth.length
+        ?byMonth.map(x=>`<tr><td>${formatMonthLabel(x.label)}</td><td class="clr-expense">${fmt(x.amount)}</td><td>${fmt(x.count)}</td></tr>`).join('')
+        :`<tr><td colspan="3" class="cc-report-empty">沒有信用卡刷卡資料</td></tr>`}</tbody>
+    </table>`;
+}
+function renderCreditCardMainTable(rows,total){
+  const data=sumCreditCardRows(rows,r=>r.main||'未分類');
+  return `<table class="cc-report-table">
+    <thead><tr><th>主類別</th><th>金額</th><th>占比</th><th>筆數</th></tr></thead>
+    <tbody>${data.length
+      ?data.map(x=>`<tr><td>${escHtml(x.label)}</td><td class="clr-expense">${fmt(x.amount)}</td><td>${total?Math.round(x.amount/total*100):0}%</td><td>${fmt(x.count)}</td></tr>`).join('')
+      :`<tr><td colspan="4" class="cc-report-empty">沒有信用卡刷卡資料</td></tr>`}</tbody>
+  </table>`;
+}
+function creditCardReportDate(s){
+  const [,m,d]=(s||'').split('-');
+  return m&&d?`${parseInt(m,10)}/${parseInt(d,10)}`:(s||'');
+}
+function renderCreditCardDetailTable(rows,idx){
+  return `<div class="cc-report-detail-wrap" id="cc-report-detail-${idx}">
+    <div class="cc-report-title">刷卡明細</div>
+    <div style="overflow:auto">
+      <table class="cc-report-table cc-report-detail">
+        <thead><tr><th>日期</th><th>主類別</th><th>子類別</th><th>金額</th><th>備註</th></tr></thead>
+        <tbody>${rows.length
+          ?rows.map(r=>`<tr>
+      <td>${creditCardReportDate(r.date)}</td>
+      <td>${escHtml(r.main||'')}</td>
+      <td>${escHtml(r.sub||'')}</td>
+      <td class="clr-expense">${fmt(Math.abs(r.amount))}</td>
+      <td>${escHtml(r.note||'')}</td>
+    </tr>`).join('')
+          :`<tr><td colspan="5" class="cc-report-empty">沒有信用卡刷卡資料</td></tr>`}</tbody>
+      </table>
+    </div>
+  </div>`;
 }
 
 function renderQMReport(){
@@ -4356,8 +4538,12 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.32';
+const APP_VERSION='friends-1.33';
 const CHANGELOG=[
+  {version:'friends-1.33',date:'2026-08-14',items:[
+    '報表頁新增信用卡報表，列出所有信用卡並依目前期間刷卡金額排序，上方按鈕可橫向滑動並快速跳到指定卡片，點卡片可展開刷卡明細',
+    '修正新增固定支出帶入報表月預算時，底層預算為正數會誤帶入正數的問題',
+  ]},
   {version:'friends-1.32',date:'2026-08-05',items:[
     '記錄頁篩選單選模式改用原生下拉選單，多選開關打開後才顯示勾選清單',
   ]},
