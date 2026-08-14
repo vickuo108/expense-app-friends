@@ -183,6 +183,7 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 #rep-view-year,#rep-view-qm,#rep-view-cc{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;min-height:0}
 .rep-view-btn{flex:1;padding:7px 0;border-radius:8px;border:1.5px solid #E5E7EB;background:#fff;font-size:12px;cursor:pointer;font-weight:600;color:#374151}
 .rep-view-btn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.rep-action-row{display:flex;gap:8px;align-items:center;margin:8px 0 4px;flex-wrap:wrap}
 .cc-report-controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .cc-report-select{width:100%;padding:9px 10px;border:1.5px solid #E5E7EB;border-radius:8px;background:#fff;font-size:13px;color:#1A1A2E}
 .cc-report-card-nav{display:flex;gap:6px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none;margin-bottom:10px}
@@ -915,7 +916,8 @@ input[type=number]{-moz-appearance:textfield}
           <button class="rep-view-btn" onclick="setRepView('cc',this)">信用卡報表</button>
         </div>
         <div id="rep-month-selector" style="display:flex;gap:6px;overflow-x:auto;padding:6px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;-ms-overflow-style:none"></div>
-        <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px;flex-wrap:wrap">
+        <div class="cc-report-card-nav" id="cc-report-card-nav" style="display:none"></div>
+        <div class="rep-action-row">
           <div id="rep-copy-btn-wrap" style="display:none">
             <button onclick="copyLastMonthBudget()" style="padding:7px 14px;border:1.5px solid #CBD5E1;border-radius:8px;background:#fff;font-size:12px;color:#374151;cursor:pointer">📋 帶入上月預估</button>
           </div>
@@ -954,7 +956,6 @@ input[type=number]{-moz-appearance:textfield}
       </div>
       <!-- 信用卡報表 -->
       <div id="rep-view-cc" style="display:none">
-        <div class="cc-report-card-nav" id="cc-report-card-nav"></div>
         <div class="cc-report-summary" id="cc-report-summary"></div>
         <div id="cc-report-card-list"></div>
       </div>
@@ -2506,6 +2507,7 @@ function setRepView(v, btn){
   document.getElementById('rep-view-qm').style.display=v==='qm'?'':'none';
   document.getElementById('rep-view-cc').style.display=v==='cc'?'':'none';
   document.getElementById('rep-month-selector').style.display=(v==='year'||v==='cc')?'flex':'none';
+  document.getElementById('cc-report-card-nav').style.display=v==='cc'?'flex':'none';
   document.getElementById('rep-copy-btn-wrap').style.display=v==='year'&&reportMonth!==0?'block':'none';
   document.getElementById('rep-pdf-btn').style.display=v==='cc'?'none':'inline-block';
   renderFinReport();
@@ -4535,8 +4537,14 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.34';
+const APP_VERSION='friends-1.36';
 const CHANGELOG=[
+  {version:'friends-1.36',date:'2026-08-14',items:[
+    '報表頁切換按鈕與匯出 PDF 按鈕增加行距，避免兩列過於擁擠',
+  ]},
+  {version:'friends-1.35',date:'2026-08-14',items:[
+    '信用卡報表的信用卡快速切換列改為置頂，往下看明細時可直接切換卡片',
+  ]},
   {version:'friends-1.34',date:'2026-08-14',items:[
     '信用卡報表刷卡明細改為手機清單版型，備註以整行顯示完整內容',
   ]},
