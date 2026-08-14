@@ -405,7 +405,7 @@ input[type=number]{-moz-appearance:textfield}
 <div class="update-banner" id="update-banner">
   <div>
     <div style="font-size:14px;font-weight:700">🎉 有新版本可用</div>
-    <div style="font-size:11px;opacity:.85;margin-top:1px">點擊右側立即更新</div>
+    <div style="font-size:11px;opacity:.85;margin-top:1px">正在自動更新</div>
   </div>
   <button class="update-banner-btn" onclick="applyUpdate()">立即更新</button>
 </div>
@@ -875,7 +875,7 @@ input[type=number]{-moz-appearance:textfield}
       </button>
       <button class="settings-btn" onclick="checkForUpdate()">
         <div class="s-icon" style="background:#F0F9FF">🔄</div>
-        <div class="s-text"><div class="s-title">檢查更新</div><div class="s-desc">手動觸發 App 更新，更新後自動重新載入</div></div>
+        <div class="s-text"><div class="s-title">檢查更新</div><div class="s-desc">手動檢查 App 更新，有新版時會自動重新載入</div></div>
         <span class="s-arrow">›</span>
       </button>
 
@@ -1349,17 +1349,28 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderAllSettingsEditors();
   initBackToTopBtns();
   let _swReg=null;
+  let _swRefreshing=false;
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').then(reg=>{
       _swReg=reg;
-      const showBanner=()=>{ if(reg.waiting) document.getElementById('update-banner').classList.add('show'); };
-      showBanner();
+      const applyWaitingUpdate=()=>{
+        if(!navigator.serviceWorker.controller||!reg.waiting) return;
+        document.getElementById('update-banner').classList.add('show');
+        reg.waiting.postMessage('SKIP_WAITING');
+      };
+      applyWaitingUpdate();
       reg.addEventListener('updatefound',()=>{
-        reg.installing.addEventListener('statechange',()=>{ if(reg.waiting) showBanner(); });
+        const worker=reg.installing;
+        if(!worker) return;
+        worker.addEventListener('statechange',()=>{ if(worker.state==='installed') applyWaitingUpdate(); });
       });
       reg.update(); // 開啟時主動檢查是否有新版（iOS PWA 必須）
     }).catch(()=>{});
-    navigator.serviceWorker.addEventListener('controllerchange',()=>window.location.reload());
+    navigator.serviceWorker.addEventListener('controllerchange',()=>{
+      if(_swRefreshing) return;
+      _swRefreshing=true;
+      window.location.reload();
+    });
   }
   checkChangelog();
   document.addEventListener('visibilitychange',()=>{
@@ -4445,6 +4456,7 @@ function checkForUpdate(){
     showToast('正在檢查更新…');
     reg.update().then(()=>{
       if(reg.waiting){
+        showToast('偵測到新版本，正在自動更新…');
         reg.waiting.postMessage('SKIP_WAITING');
       } else {
         showToast('已是最新版本 ✓');
@@ -4537,8 +4549,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.36';
+const APP_VERSION='friends-1.37';
 const CHANGELOG=[
+  {version:'friends-1.37',date:'2026-08-14',items:[
+    'App 偵測到新版本時會自動套用並重新載入，不需要再手動按立即更新',
+  ]},
   {version:'friends-1.36',date:'2026-08-14',items:[
     '報表頁切換按鈕與匯出 PDF 按鈕增加行距，避免兩列過於擁擠',
   ]},
