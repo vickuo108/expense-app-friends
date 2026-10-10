@@ -393,6 +393,8 @@ input[type=number]{-moz-appearance:textfield}
     <div class="login-logo">💰</div>
     <div class="login-title">記帳本</div>
     <div class="login-sub" id="login-mode-sub">登入以同步資料</div>
+    <button class="login-btn" id="google-login-btn" type="button" onclick="doGoogleAuth()">使用 Google 登入</button>
+    <div class="login-sub" style="margin:14px 0">或使用原有 Email 帳號登入</div>
     <input class="login-input" id="login-email" type="email" placeholder="Email" autocomplete="email" inputmode="email">
     <input class="login-input" id="login-password" type="password" placeholder="密碼" autocomplete="current-password">
     <button class="login-btn" id="login-submit-btn" onclick="doAuthSubmit()">登入</button>
@@ -893,6 +895,7 @@ input[type=number]{-moz-appearance:textfield}
       <div id="ss-account" class="settings-section-title">👤 帳號</div>
       <div class="card" style="padding:14px;margin-bottom:8px">
         <div style="font-size:13px;color:#374151;margin-bottom:12px">已登入：<span id="acct-email" style="font-weight:600;color:var(--primary)"></span></div>
+        <button class="login-btn" id="google-link-btn" type="button" onclick="doGoogleAuth(true)" style="margin-bottom:12px">連結 Google 帳號</button>
         <div style="display:flex;gap:8px">
           <button onclick="manualSync()" style="flex:1;padding:10px;background:#EFF6FF;border:1.5px solid #BFDBFE;border-radius:8px;font-size:13px;color:#1D4ED8;cursor:pointer;font-weight:600">☁️ 立即同步</button>
           <button onclick="doLogout()" style="flex:1;padding:10px;background:#FFF1F2;border:1.5px solid #FECDD3;border-radius:8px;font-size:13px;color:#EF4444;cursor:pointer;font-weight:600">登出</button>
@@ -4549,8 +4552,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.37';
+const APP_VERSION='friends-1.38';
 const CHANGELOG=[
+  {version:'friends-1.38',date:'2026-10-10',items:[
+    '新增 Google 登入與帳號連結，移除長時間未開啟後強制登出的限制',
+  ]},
   {version:'friends-1.37',date:'2026-08-14',items:[
     'App 偵測到新版本時會自動套用並重新載入，不需要再手動按立即更新',
   ]},
@@ -4920,6 +4926,54 @@ async function manualSync(){
   showToast('☁️ 同步中...'); await syncFromCloud(); await syncToCloud(); showToast('✅ 同步完成');
 }
 
+function googleAuthError(error){
+  const messages={
+    'auth/popup-blocked':'登入視窗被封鎖，請允許彈出視窗後再試。',
+    'auth/popup-closed-by-user':'已取消 Google 登入。',
+    'auth/cancelled-popup-request':'已有登入視窗開啟，請先完成登入。',
+    'auth/unauthorized-domain':'目前網址尚未獲准使用 Google 登入，請在 Firebase 加入授權網域。',
+    'auth/operation-not-allowed':'尚未啟用 Google 登入，請在 Firebase 啟用 Google 登入服務。',
+    'auth/account-exists-with-different-credential':'請先用原本的 Email 與密碼登入，再到設定連結 Google 帳號。',
+    'auth/credential-already-in-use':'這個 Google 帳號已連結其他帳號，請選擇另一個 Google 帳號。',
+    'auth/provider-already-linked':'此帳號已連結 Google，可直接使用 Google 登入。',
+    'auth/network-request-failed':'網路連線失敗，請連線後再試。',
+    'auth/requires-recent-login':'請先重新登入原帳號，再連結 Google。',
+  };
+  return messages[error.code]||('Google 登入失敗（'+(error.code||'未知錯誤')+'），請再試一次。');
+}
+
+function renderGoogleAccount(){
+  const linked=!!_auth.currentUser?.providerData.some(provider=>provider.providerId==='google.com');
+  const button=document.getElementById('google-link-btn');
+  if(button){ button.disabled=linked; button.textContent=linked?'已連結 Google 帳號':'連結 Google 帳號'; }
+}
+
+async function doGoogleAuth(link=false){
+  const button=document.getElementById(link?'google-link-btn':'google-login-btn');
+  const errorElement=document.getElementById('login-error');
+  button.disabled=true;
+  errorElement.textContent='';
+  try{
+    const provider=new firebase.auth.GoogleAuthProvider();
+    provider.setCustomParameters({prompt:'select_account'});
+    // Open directly from the tap so Safari retains the popup user gesture.
+    if(link){
+      if(!_auth.currentUser) throw {code:'auth/requires-recent-login'};
+      await _auth.currentUser.linkWithPopup(provider);
+      showToast('已連結 Google 帳號，原有記帳資料保留');
+    } else {
+      await _auth.signInWithPopup(provider);
+    }
+  } catch(error){
+    const message=googleAuthError(error);
+    if(link) showToast(message);
+    else { errorElement.style.color='#EF4444'; errorElement.textContent=message; }
+  } finally {
+    button.disabled=false;
+    renderGoogleAccount();
+  }
+}
+
 // Auth UI
 function renderAuthMode(){
   const isLogin=_authMode==='login';
@@ -5002,15 +5056,10 @@ async function doLogout(){
 
 // Auth state listener
 const KEY_LAST_ACTIVE='friends_last_active';
-const SEVEN_DAYS=7*24*60*60*1000;
 _auth.onAuthStateChanged(async user=>{
   _fbUser=user;
   if(user){
-    const lastActive=parseInt(localStorage.getItem(KEY_LAST_ACTIVE)||'0');
-    if(lastActive && Date.now()-lastActive>SEVEN_DAYS){
-      await _auth.signOut(); return;
-    }
-    localStorage.setItem(KEY_LAST_ACTIVE, Date.now().toString());
+    renderGoogleAccount();
     localStorage.setItem('friends_last_email', user.email);
     document.getElementById('acct-email').textContent=user.email;
     const overlay=document.getElementById('login-overlay');
