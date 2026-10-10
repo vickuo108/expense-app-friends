@@ -4552,8 +4552,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.38';
+const APP_VERSION='friends-1.39';
 const CHANGELOG=[
+  {version:'friends-1.39',date:'2026-10-10',items:[
+    '同一裝置切換帳號時，本機記帳資料依帳號分開保存與還原，避免不同帳號資料混用',
+  ]},
   {version:'friends-1.38',date:'2026-10-10',items:[
     '新增 Google 登入與帳號連結，移除長時間未開啟後強制登出的限制',
   ]},
@@ -4823,6 +4826,57 @@ const _db=firebase.firestore(_fbApp);
 _auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
 
 let _fbUser=null, _isSyncing=false, _syncTimer=null, _authMode='login', _pendingNewAccountReset=false;
+const ACCOUNT_OWNER_KEY='friends_account_owner_v1';
+const ACCOUNT_SCOPED_KEY='friends_account_scoped_v1';
+const ACCOUNT_DATA_PREFIX='friends_account_data_v1:';
+const ACCOUNT_DATA_KEYS=[
+  KEY_RECORDS,KEY_BLANK_ACCOUNT,KEY_MG,KEY_CATS,KEY_INCOME,KEY_FIXED,
+  KEY_FIXED_GROUPS,KEY_LOANS,KEY_LOAN_PRIN,KEY_ACCT_BAL,KEY_ACCT_AVAIL,
+  KEY_CC_DUE,KEY_CC_LIMITS,KEY_FIN_PLAN,KEY_BUDGETS,KEY_MONTHLY_BUDGETS,
+  KEY_APP_NAME,KEY_GLOSSARY,KEY_REPORT_STATE,
+];
+
+function readLocalAccountData(){
+  const data={};
+  ACCOUNT_DATA_KEYS.forEach(key=>{
+    const value=localStorage.getItem(key);
+    if(value!==null) data[key]=value;
+  });
+  return data;
+}
+
+function saveLocalAccountData(uid){
+  localStorage.setItem(ACCOUNT_DATA_PREFIX+uid,JSON.stringify(readLocalAccountData()));
+}
+
+function switchLocalAccount(uid){
+  const owner=localStorage.getItem(ACCOUNT_OWNER_KEY);
+  if(!uid&&!owner) return false;
+  if(owner===uid) return false;
+  if(owner) saveLocalAccountData(owner);
+  else if(!localStorage.getItem(ACCOUNT_SCOPED_KEY)){
+    const legacy=readLocalAccountData();
+    if(Object.keys(legacy).length){
+      const key=uid&&localStorage.getItem('friends_last_email')===_fbUser?.email
+        ? ACCOUNT_DATA_PREFIX+uid : 'friends_unassigned_legacy_data_v1';
+      if(!localStorage.getItem(key)) localStorage.setItem(key,JSON.stringify(legacy));
+    }
+  }
+  ACCOUNT_DATA_KEYS.forEach(key=>localStorage.removeItem(key));
+  if(uid){
+    const saved=localStorage.getItem(ACCOUNT_DATA_PREFIX+uid);
+    const data=JSON.parse(saved||'{}');
+    ACCOUNT_DATA_KEYS.forEach(key=>{
+      if(typeof data[key]==='string') localStorage.setItem(key,data[key]);
+    });
+    if(!saved) localStorage.setItem(KEY_BLANK_ACCOUNT,'1');
+    localStorage.setItem(ACCOUNT_OWNER_KEY,uid);
+  } else {
+    localStorage.removeItem(ACCOUNT_OWNER_KEY);
+  }
+  localStorage.setItem(ACCOUNT_SCOPED_KEY,'1');
+  return true;
+}
 
 function setSyncDot(s){ const d=document.getElementById('sync-dot'); d.className=s; }
 
@@ -4873,18 +4927,21 @@ function syncAppTitleNow(){
 async function syncToCloud(){
   if(!_fbUser) return;
   try{
+    const uid=_fbUser.uid;
     const _cats=loadCats();
     const p={blank_account:isBlankAccount(),records:loadRecords(),methods_grouped:loadMG(),categories:_cats,cats_order:Object.keys(_cats),income_cats:loadIncome(),fixed:loadFixed(),fixed_groups:loadFixedGroups(),loans:loadLoans(),loan_prin:loadLoanPrin(),acct_bal:loadAcctBal(),acct_avail:loadAcctAvail(),cc_due:loadCCDue(),cc_limits:loadCCLimits(),fin_plan:loadFinPlan(),monthly_budgets:loadMonthlyBudgets(),app_name:localStorage.getItem(KEY_APP_NAME)||''};
-    await _db.collection('users').doc(_fbUser.uid).collection('data').doc(FRIENDS_CLOUD_DOC).set(p);
-    setSyncDot('ok');
+    await _db.collection('users').doc(uid).collection('data').doc(FRIENDS_CLOUD_DOC).set(p);
+    if(_fbUser?.uid===uid) setSyncDot('ok');
   } catch(e){ setSyncDot('error'); }
 }
 
 async function syncFromCloud(){
   if(!_fbUser) return;
+  const uid=_fbUser.uid;
   setSyncDot('syncing');
   try{
-    const doc=await _db.collection('users').doc(_fbUser.uid).collection('data').doc(FRIENDS_CLOUD_DOC).get();
+    const doc=await _db.collection('users').doc(uid).collection('data').doc(FRIENDS_CLOUD_DOC).get();
+    if(_fbUser?.uid!==uid) return false;
     if(doc.exists){
       _isSyncing=true;
       const d=doc.data();
@@ -4918,7 +4975,8 @@ async function syncFromCloud(){
       if(document.getElementById('panel-report')?.classList.contains('active')) renderFinReport();
     }
     setSyncDot('ok');
-  } catch(e){ _isSyncing=false; setSyncDot('error'); }
+    return true;
+  } catch(e){ _isSyncing=false; setSyncDot('error'); return false; }
 }
 
 async function manualSync(){
@@ -5057,13 +5115,31 @@ async function doLogout(){
 // Auth state listener
 const KEY_LAST_ACTIVE='friends_last_active';
 _auth.onAuthStateChanged(async user=>{
+  clearTimeout(_syncTimer);
   _fbUser=user;
   if(user){
-    renderGoogleAccount();
-    localStorage.setItem('friends_last_email', user.email);
-    document.getElementById('acct-email').textContent=user.email;
     const overlay=document.getElementById('login-overlay');
-    overlay.style.opacity='0'; setTimeout(()=>overlay.style.display='none',300);
+    overlay.style.display='flex'; overlay.style.opacity='1';
+    try{
+      if(switchLocalAccount(user.uid)){
+        localStorage.setItem('friends_last_email',user.email);
+        if(_pendingNewAccountReset){
+          clearAppDataForNewAccount();
+          await syncToCloud();
+          _pendingNewAccountReset=false;
+        }
+        window.location.reload();
+        return;
+      }
+    } catch(error){
+      console.error(error);
+      setLoginMessage('無法切換本機帳號資料，請確認裝置儲存空間。');
+      setSyncDot('error');
+      return;
+    }
+    renderGoogleAccount();
+    localStorage.setItem('friends_last_email',user.email);
+    document.getElementById('acct-email').textContent=user.email;
     if(_pendingNewAccountReset){
       clearAppDataForNewAccount();
       await syncToCloud();
@@ -5072,7 +5148,12 @@ _auth.onAuthStateChanged(async user=>{
     } else {
       await syncFromCloud();
     }
+    if(_fbUser?.uid!==user.uid) return;
+    overlay.style.opacity='0'; setTimeout(()=>overlay.style.display='none',300);
   } else {
+    try{ switchLocalAccount(null); }
+    catch(error){ console.error(error); }
+    loadAppTitle();
     localStorage.removeItem(KEY_LAST_ACTIVE);
     const overlay=document.getElementById('login-overlay');
     overlay.style.display='flex'; overlay.style.opacity='1';
