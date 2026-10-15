@@ -50,10 +50,16 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .btn-submit:active{transform:scale(.98)}
 .search-row{display:flex;gap:8px;margin-bottom:10px}
 .records-sticky-top{position:sticky;top:0;z-index:80;background:#F0F2F5;margin:0 -12px 10px;padding:0 12px 6px}
-.search-input{flex:1;padding:10px 13px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;background:#fff}
+.search-input{flex:1;min-width:0;padding:10px 13px;border:1.5px solid #E5E7EB;border-radius:10px;font-size:14px;background:#fff}
 .search-input:focus{outline:none;border-color:var(--primary)}
 .filter-toggle{padding:10px 13px;border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;white-space:nowrap;color:#6B7280}
 .filter-toggle.active{border-color:var(--primary);color:var(--primary);background:var(--primary-tint)}
+.record-select-toggle{padding:10px 11px;border:1.5px solid #E5E7EB;border-radius:10px;background:#fff;cursor:pointer;font-size:14px;white-space:nowrap;color:#6B7280}
+.record-select-toggle.active{border-color:var(--primary);color:var(--primary);background:var(--primary-tint)}
+.record-selection-summary{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;margin-bottom:8px;border:1px solid var(--primary-border);border-radius:8px;background:var(--primary-tint);font-size:12px;color:#374151}
+.record-selection-summary[hidden]{display:none}
+.record-selection-total{margin-left:auto;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--primary-deep)}
+.record-selection-clear{border:none;background:transparent;color:var(--primary);font-size:12px;font-weight:700;cursor:pointer;padding:4px}
 .filter-clear{padding:10px 13px;border:1.5px solid #EF4444;border-radius:10px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;color:#EF4444}
 .filter-card{background:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);display:none}
 .filter-card.open{display:block}
@@ -99,6 +105,9 @@ html,body{height:100%;height:-webkit-fill-available;overflow:hidden;font-family:
 .ctx-menu-btn:hover{background:#F3F4F6}
 .ctx-menu-btn.danger{color:#EF4444}
 .tx-item{display:flex;align-items:center;padding:11px 0;cursor:pointer;border-bottom:1px solid #F3F4F6;transition:transform .25s cubic-bezier(.25,1,.5,1);background:#fff;position:relative;z-index:2}
+.tx-item.selected{background:var(--primary-tint)}
+.tx-select-check{width:21px;height:21px;margin-right:10px;border:1.5px solid #C9D0DD;border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;font-size:14px;font-weight:700}
+.tx-item.selected .tx-select-check{background:var(--primary);border-color:var(--primary)}
 .tx-item.sw-moving{transition:none}
 .tx-icon-wrap{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
 .tx-body{flex:1;min-width:0;margin:0 10px}
@@ -595,6 +604,7 @@ input[type=number]{-moz-appearance:textfield}
           <input type="text" class="search-input" id="search-input" placeholder="🔍 搜尋類別、備註、金額...">
           <button class="filter-clear" id="filter-clear" style="display:none" onclick="clearFilters()">✕ 清除</button>
           <button class="filter-toggle" id="filter-toggle">篩選</button>
+          <button class="record-select-toggle" id="record-select-toggle" type="button" aria-pressed="false" onclick="toggleRecordSelection()">加總</button>
         </div>
         <div class="filter-card" id="filter-card">
           <div class="filter-mode-row">
@@ -634,6 +644,11 @@ input[type=number]{-moz-appearance:textfield}
           </div>
         </div>
         <div id="records-summary" class="records-summary" style="display:none"></div>
+        <div id="record-selection-summary" class="record-selection-summary" aria-live="polite" hidden>
+          <span id="record-selection-count">已選 0 筆</span>
+          <strong id="record-selection-total" class="record-selection-total">合計 $0</strong>
+          <button type="button" class="record-selection-clear" onclick="clearRecordSelection()">清除</button>
+        </div>
       </div>
       <div id="records-cat-stats" style="display:none"></div>
       <div id="records-list"></div>
@@ -2139,8 +2154,61 @@ function flowSummaryHTML(records){
   if(exp) parts.push("流出 "+fmt(Math.abs(exp)));
   return parts.map(p=>"<span>"+p+"</span>").join("");
 }
+let recordSelectionMode=false;
+const selectedRecordIds=new Set();
+
+function toggleRecordSelection(){
+  recordSelectionMode=!recordSelectionMode;
+  selectedRecordIds.clear();
+  if(_swOpen){ _swReset(_swOpen); _swOpen=null; }
+  _sw=null;
+  document.getElementById('record-context-menu').classList.remove('open');
+  renderRecords();
+}
+
+function clearRecordSelection(){
+  selectedRecordIds.clear();
+  document.querySelectorAll('#records-list .tx-item.selected').forEach(item=>{
+    item.classList.remove('selected');
+    item.setAttribute('aria-checked','false');
+    item.querySelector('.tx-select-check').textContent='';
+  });
+  updateRecordSelectionSummary(loadRecords());
+}
+
+function toggleRecordSelectionItem(item){
+  const id=item?.dataset.rid;
+  if(!id) return;
+  if(selectedRecordIds.has(id)) selectedRecordIds.delete(id);
+  else selectedRecordIds.add(id);
+  const selected=selectedRecordIds.has(id);
+  item.classList.toggle('selected',selected);
+  item.setAttribute('aria-checked',String(selected));
+  item.querySelector('.tx-select-check').textContent=selected?'✓':'';
+  updateRecordSelectionSummary(loadRecords());
+}
+
+function updateRecordSelectionSummary(records){
+  const toggle=document.getElementById('record-select-toggle');
+  const summary=document.getElementById('record-selection-summary');
+  toggle.classList.toggle('active',recordSelectionMode);
+  toggle.setAttribute('aria-pressed',String(recordSelectionMode));
+  toggle.textContent=recordSelectionMode?'完成':'加總';
+  summary.hidden=!recordSelectionMode;
+  if(!recordSelectionMode) return;
+  const existingIds=new Set(records.map(r=>r.id));
+  for(const id of selectedRecordIds) if(!existingIds.has(id)) selectedRecordIds.delete(id);
+  const selected=records.filter(r=>selectedRecordIds.has(r.id));
+  const hidden=selected.length-document.querySelectorAll('#records-list .tx-item.selected').length;
+  const total=selected.reduce((sum,r)=>sum+Number(r.amount||0),0);
+  document.getElementById('record-selection-count').textContent=`已選 ${selected.length} 筆${hidden?`（${hidden} 筆未顯示）`:''}`;
+  const totalEl=document.getElementById('record-selection-total');
+  totalEl.textContent=`合計 ${total<0?'-':''}$${Math.abs(total).toLocaleString('zh-TW',{maximumFractionDigits:2})}`;
+  totalEl.className='record-selection-total'+(total<0?' clr-expense':total>0?' clr-income':'');
+}
 function renderRecords(){
-  const filtered=applyFilters(loadRecords()).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
+  const allRecords=loadRecords();
+  const filtered=applyFilters(allRecords).sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
   const list=document.getElementById('records-list');
   const sumEl=document.getElementById('records-summary');
   const catEl=document.getElementById('records-cat-stats');
@@ -2187,7 +2255,7 @@ function renderRecords(){
   } else { sumEl.style.display='none'; catEl.style.display='none'; }
   if(!filtered.length){
     list.innerHTML='<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-title">沒有符合的記錄</div><div class="empty-sub">試著新增一筆或調整篩選條件</div></div>';
-    updateClearBtn(); return;
+    updateClearBtn(); updateRecordSelectionSummary(allRecords); return;
   }
   const groups={};
   filtered.forEach(r=>{ (groups[r.date]=groups[r.date]||[]).push(r); });
@@ -2202,6 +2270,7 @@ function renderRecords(){
     <div class="card" style="padding:4px 14px">${groups[date].map(txItemHTML).join('')}</div>`;
   }).join('');
   updateClearBtn();
+  updateRecordSelectionSummary(allRecords);
 }
 
 function txItemHTML(r){
@@ -2211,10 +2280,12 @@ function txItemHTML(r){
   const installBadge=r.installments>1?`<span class="badge badge-install">分${r.installments}期</span>`:'';
   const badge=installBadge;
   const mainLine=[r.method&&r.method!=='無'?r.method:null,r.main||r.type,r.sub].filter(Boolean).join(' · ');
+  const selected=recordSelectionMode&&selectedRecordIds.has(r.id);
   return `<div class="tx-swipe-wrap">
     <div class="tx-copy-btn" onclick="copyRecord('${r.id}')">複製</div>
     <div class="tx-del-btn" onclick="swipeDelete('${r.id}')">刪除</div>
-    <div class="tx-item" data-rid="${r.id}">
+    <div class="tx-item${selected?' selected':''}" data-rid="${r.id}"${recordSelectionMode?` role="checkbox" aria-checked="${selected}" tabindex="0"`:''}>
+      ${recordSelectionMode?`<span class="tx-select-check" aria-hidden="true">${selected?'✓':''}</span>`:''}
       <div class="tx-icon-wrap ${bg}">${ic}</div>
       <div class="tx-body">
         <div class="tx-main">${mainLine} ${badge}</div>
@@ -2236,9 +2307,17 @@ function initSwipeDelete(){
   list.addEventListener('touchend',_swEnd,{passive:true});
   list.addEventListener('touchcancel',_swEnd,{passive:true});
   list.addEventListener('click',_swClick,true);
+  list.addEventListener('keydown',e=>{
+    if(!recordSelectionMode||!['Enter',' '].includes(e.key)) return;
+    const item=e.target.closest('.tx-item');
+    if(!item) return;
+    e.preventDefault();
+    toggleRecordSelectionItem(item);
+  });
   initRecordContextMenu(list);
 }
 function _swStart(e){
+  if(recordSelectionMode) return;
   if(e.target.closest('.tx-del-btn')||e.target.closest('.tx-copy-btn')) return;
   const item=e.target.closest('.tx-item');
   if(_swOpen&&_swOpen!==item){ _swReset(_swOpen); _swOpen=null; }
@@ -2267,6 +2346,11 @@ function _swReset(item){ item.style.transform=''; item._swOpen=false; }
 function _swClick(e){
   const item=e.target.closest('.tx-item');
   if(!item) return;
+  if(recordSelectionMode){
+    e.preventDefault(); e.stopPropagation();
+    toggleRecordSelectionItem(item);
+    return;
+  }
   if(item._swOpen){ e.stopPropagation(); _swReset(item); _swOpen=null; return; }
   if(_swOpen&&_swOpen!==item){ e.stopPropagation(); _swReset(_swOpen); _swOpen=null; return; }
   // Normal tap → open edit
@@ -2281,6 +2365,7 @@ function initRecordContextMenu(list){
     const item=e.target.closest('.tx-item');
     if(!item) return;
     e.preventDefault();
+    if(recordSelectionMode) return;
     if(_swOpen){ _swReset(_swOpen); _swOpen=null; }
     _ctxRid=item.dataset.rid;
     menu.classList.add('open');
@@ -2481,9 +2566,18 @@ function saveReportState(){
   localStorage.setItem(KEY_REPORT_STATE,JSON.stringify({year:reportYear,month:reportMonth}));
 }
 function syncReportMonthButtons(){
-  document.querySelectorAll('#rep-month-selector .rep-month-btn').forEach(b=>{
-    b.classList.toggle('active',parseInt(b.dataset.m,10)===reportMonth);
+  const selector=document.getElementById('rep-month-selector');
+  let active=null;
+  selector.querySelectorAll('.rep-month-btn').forEach(b=>{
+    const selected=parseInt(b.dataset.m,10)===reportMonth;
+    b.classList.toggle('active',selected);
+    if(selected) active=b;
   });
+  if(!active||!selector.clientWidth) return;
+  const bounds=selector.getBoundingClientRect();
+  const monthBounds=active.getBoundingClientRect();
+  if(monthBounds.right>bounds.right) selector.scrollLeft+=monthBounds.right-bounds.right+6;
+  else if(monthBounds.left<bounds.left) selector.scrollLeft-=bounds.left-monthBounds.left+6;
 }
 const _reportState=loadReportState();
 let reportYear=_reportState.year, reportMonth=_reportState.month, repView='year';
@@ -4552,8 +4646,12 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.39';
+const APP_VERSION='friends-1.40';
 const CHANGELOG=[
+  {version:'friends-1.40',date:'2026-10-15',items:[
+    '記錄頁可勾選不連續的記帳並加總金額',
+    '報表月份列會自動顯示目前選取的月份',
+  ]},
   {version:'friends-1.39',date:'2026-10-10',items:[
     '同一裝置切換帳號時，本機記帳資料依帳號分開保存與還原，避免不同帳號資料混用',
   ]},
