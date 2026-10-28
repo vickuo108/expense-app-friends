@@ -2834,12 +2834,22 @@ function scrollCreditCardReportTo(idx){
   const el=document.getElementById(`cc-report-card-${idx}`);
   if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
 }
+const _openCreditCardReportDetails=new Set();
+let _creditCardReportCards=[];
+function creditCardReportDetailKey(card){
+  return `${reportYear}-${reportMonth}:${card}`;
+}
 function toggleCreditCardReportDetail(idx){
   const el=document.getElementById(`cc-report-detail-${idx}`);
-  if(el) el.classList.toggle('open');
+  const card=_creditCardReportCards[idx];
+  if(!el||!card) return;
+  const key=creditCardReportDetailKey(card);
+  if(el.classList.toggle('open')) _openCreditCardReportDetails.add(key);
+  else _openCreditCardReportDetails.delete(key);
 }
 function renderCreditCardCardList(rows){
   const cards=sortedCreditCardsForReport(rows).map(x=>x.card);
+  _creditCardReportCards=cards;
   const byCard=Object.fromEntries(cards.map(card=>[card,rows.filter(r=>r.method===card)]));
   document.getElementById('cc-report-card-list').innerHTML=cards.length
     ?cards.map((card,i)=>renderCreditCardSection(card,byCard[card]||[],i)).join('')
@@ -2850,7 +2860,7 @@ function renderCreditCardSection(card,rows,idx){
   const top=sumCreditCardRows(rows,r=>r.main||'未分類')[0];
   const monthly=reportMonth===0?renderCreditCardMonthTable(rows):'';
   const mainTable=renderCreditCardMainTable(rows,total);
-  const detail=renderCreditCardDetailTable(rows,idx);
+  const detail=renderCreditCardDetailTable(rows,idx,_openCreditCardReportDetails.has(creditCardReportDetailKey(card)));
   return `<div class="cc-report-section" id="cc-report-card-${idx}">
     <div class="cc-report-card-head" onclick="toggleCreditCardReportDetail(${idx})">
       <div>
@@ -2891,8 +2901,8 @@ function creditCardReportDate(s){
   const [,m,d]=(s||'').split('-');
   return m&&d?`${parseInt(m,10)}/${parseInt(d,10)}`:(s||'');
 }
-function renderCreditCardDetailTable(rows,idx){
-  return `<div class="cc-report-detail-wrap" id="cc-report-detail-${idx}">
+function renderCreditCardDetailTable(rows,idx,isOpen=false){
+  return `<div class="cc-report-detail-wrap${isOpen?' open':''}" id="cc-report-detail-${idx}">
     <div class="cc-report-title">刷卡明細</div>
     <div class="cc-report-detail-list">${rows.length
       ?rows.map(r=>`<div class="cc-report-detail-item">
@@ -4646,8 +4656,11 @@ function resolveAppPrompt(ok){
 }
 
 // ─── 版本與更新日誌 ───────────────────────────────────────────────────────────
-const APP_VERSION='friends-1.40';
+const APP_VERSION='friends-1.41';
 const CHANGELOG=[
+  {version:'friends-1.41',date:'2026-10-29',items:[
+    '信用卡報表切換頁面後保留卡片明細的展開狀態',
+  ]},
   {version:'friends-1.40',date:'2026-10-15',items:[
     '記錄頁可勾選不連續的記帳並加總金額',
     '報表月份列會自動顯示目前選取的月份',
